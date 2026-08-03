@@ -11,10 +11,12 @@ import {
   AlertTitle,
 } from "@/components/ui/alert"
 import { useMilkdownEditor } from "@/composables/useMilkdownEditor"
+import type { EditorViewportState } from "@/features/tabs"
 
 interface Props {
   modelValue: string
   readonly?: boolean
+  editorState: EditorViewportState
 }
 
 const props = withDefaults(defineProps<Props>(), {
@@ -23,6 +25,7 @@ const props = withDefaults(defineProps<Props>(), {
 
 const emit = defineEmits<{
   "update:modelValue": [value: string]
+  "update:editorState": [value: EditorViewportState]
 }>()
 
 const editorRoot = ref<HTMLElement | null>(null)
@@ -39,6 +42,8 @@ const {
   getMarkdown: () => props.modelValue,
   getReadonly: () => props.readonly,
   onMarkdownChange: (markdown) => emit("update:modelValue", markdown),
+  getEditorState: () => props.editorState,
+  onEditorStateChange: (state) => emit("update:editorState", state),
 })
 
 watch(() => props.modelValue, setMarkdown)

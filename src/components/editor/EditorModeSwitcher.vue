@@ -3,11 +3,10 @@ import {
   ToggleGroup,
   ToggleGroupItem,
 } from "@/components/ui/toggle-group"
-import { useDocumentsStore } from "@/stores/documents"
-import type { DocumentMode } from "@/types/document"
+import { useTabsStore, type WorkspaceMode } from "@/features/tabs"
 
 interface ModeOption {
-  value: DocumentMode
+  value: WorkspaceMode
   label: string
 }
 
@@ -17,16 +16,18 @@ const modes: readonly ModeOption[] = [
   { value: "split", label: "Split" },
 ]
 
-const documentsStore = useDocumentsStore()
+const tabsStore = useTabsStore()
 
-function isDocumentMode(value: unknown): value is DocumentMode {
+function isDocumentMode(value: unknown): value is WorkspaceMode {
   return typeof value === "string"
     && modes.some((mode) => mode.value === value)
 }
 
 function selectMode(value: unknown): void {
   // A controlled group must never deselect the active document mode.
-  if (isDocumentMode(value)) documentsStore.setMode(value)
+  if (isDocumentMode(value) && tabsStore.activeTabId) {
+    tabsStore.setMode(tabsStore.activeTabId, value)
+  }
 }
 </script>
 
@@ -36,7 +37,8 @@ function selectMode(value: unknown): void {
     orientation="horizontal"
     variant="outline"
     size="sm"
-    :model-value="documentsStore.activeDocument.mode"
+    :model-value="tabsStore.activeTab?.mode"
+    :disabled="!tabsStore.activeTab"
     aria-label="Document mode"
     class="bg-muted/50 p-0.5"
     @update:model-value="selectMode"

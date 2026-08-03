@@ -1,165 +1,94 @@
 <script setup lang="ts">
-import { ref } from "vue"
-import { FilePenLine, Plus, Redo2, Save, Undo2 } from "@lucide/vue"
+import { FolderOpen, Redo2, Save, SaveAll, Undo2 } from "@lucide/vue"
 
-import EditorModeSwitcher from "@/components/editor/EditorModeSwitcher.vue"
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog"
-import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { ButtonGroup } from "@/components/ui/button-group"
-import { Separator } from "@/components/ui/separator"
 import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from "@/components/ui/tooltip"
-import { useDocumentsStore } from "@/stores/documents"
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
+import { Separator } from "@/components/ui/separator"
+import { useFilesStore } from "@/features/files"
+import { useTabsStore } from "@/features/tabs"
 
 const emit = defineEmits<{
   undo: []
   redo: []
+  open: []
+  save: []
+  saveAs: []
+  openRecent: [path: string]
 }>()
 
-const documentsStore = useDocumentsStore()
-const discardDialogOpen = ref(false)
-
-function requestNewDocument(): void {
-  if (documentsStore.isDirty) {
-    discardDialogOpen.value = true
-    return
-  }
-
-  documentsStore.createDocument()
-}
-
-function discardAndCreateDocument(): void {
-  documentsStore.createDocument()
-  discardDialogOpen.value = false
-}
+const tabsStore = useTabsStore()
+const filesStore = useFilesStore()
 </script>
 
 <template>
-  <TooltipProvider :delay-duration="250">
-    <header class="editor-toolbar">
-      <div class="editor-toolbar__document">
-        <div class="editor-toolbar__logo" aria-hidden="true">
-          <FilePenLine class="size-4" />
-        </div>
-        <div class="editor-toolbar__title">
-          <span class="editor-toolbar__app-name">Emditor</span>
-          <span class="editor-toolbar__document-name">
-            {{ documentsStore.activeDocument.name }}
-          </span>
-        </div>
-        <Badge
-          :variant="documentsStore.isDirty ? 'destructive' : 'secondary'"
-          class="editor-toolbar__status"
-        >
-          {{ documentsStore.isDirty ? "Unsaved" : "Saved" }}
-        </Badge>
-      </div>
+  <header class="editor-toolbar">
+    <div class="editor-toolbar__document">
+      <span class="editor-toolbar__app-name">Emditor</span>
+      <span v-if="tabsStore.activeTab" class="editor-toolbar__document-name">
+        {{ tabsStore.activeTab.filePath ?? tabsStore.activeTab.title }}
+      </span>
+    </div>
 
-      <EditorModeSwitcher class="editor-toolbar__modes" />
+    <div class="editor-toolbar__actions">
+      <ButtonGroup aria-label="Edit history">
+        <Button variant="outline" size="icon" aria-label="Undo" @click="emit('undo')">
+          <Undo2 />
+        </Button>
+        <Button variant="outline" size="icon" aria-label="Redo" @click="emit('redo')">
+          <Redo2 />
+        </Button>
+      </ButtonGroup>
 
-      <div class="editor-toolbar__actions">
-        <ButtonGroup aria-label="Edit history">
-          <Tooltip>
-            <TooltipTrigger as-child>
-              <Button
-                variant="outline"
-                size="icon"
-                aria-label="Undo"
-                @click="emit('undo')"
-              >
-                <Undo2 />
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent>Undo</TooltipContent>
-          </Tooltip>
+      <Separator orientation="vertical" class="mx-1 h-5" />
 
-          <Tooltip>
-            <TooltipTrigger as-child>
-              <Button
-                variant="outline"
-                size="icon"
-                aria-label="Redo"
-                @click="emit('redo')"
-              >
-                <Redo2 />
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent>Redo</TooltipContent>
-          </Tooltip>
-        </ButtonGroup>
-
-        <Separator orientation="vertical" class="mx-1 h-5" />
-
-        <ButtonGroup aria-label="Document actions">
-          <Tooltip>
-            <TooltipTrigger as-child>
-              <Button
-                variant="outline"
-                size="sm"
-                aria-label="New document"
-                @click="requestNewDocument"
-              >
-                <Plus />
-                <span class="editor-toolbar__action-label">New</span>
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent>New document</TooltipContent>
-          </Tooltip>
-
-          <Tooltip>
-            <TooltipTrigger as-child>
-              <Button
-                variant="outline"
-                size="sm"
-                :disabled="!documentsStore.isDirty"
-                aria-label="Save document"
-                @click="documentsStore.markSaved"
-              >
-                <Save />
-                <span class="editor-toolbar__action-label">
-                  {{ documentsStore.isDirty ? "Save" : "Saved" }}
-                </span>
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent>Mark the document as saved</TooltipContent>
-          </Tooltip>
-        </ButtonGroup>
-      </div>
-    </header>
-
-    <AlertDialog v-model:open="discardDialogOpen">
-      <AlertDialogContent>
-        <AlertDialogHeader>
-          <AlertDialogTitle>Discard unsaved changes?</AlertDialogTitle>
-          <AlertDialogDescription>
-            Creating a new document will permanently discard the changes in
-            {{ documentsStore.activeDocument.name }}.
-          </AlertDialogDescription>
-        </AlertDialogHeader>
-        <AlertDialogFooter>
-          <AlertDialogCancel>Cancel</AlertDialogCancel>
-          <AlertDialogAction
-            variant="destructive"
-            @click="discardAndCreateDocument"
+      <DropdownMenu>
+        <DropdownMenuTrigger as-child>
+          <Button variant="outline" size="sm"><FolderOpen />Open</Button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="end" class="w-64">
+          <DropdownMenuItem @select="emit('open')">Open file…</DropdownMenuItem>
+          <DropdownMenuSeparator />
+          <DropdownMenuLabel>Recent documents</DropdownMenuLabel>
+          <DropdownMenuItem v-if="filesStore.recentFiles.length === 0" disabled>
+            No recent documents
+          </DropdownMenuItem>
+          <DropdownMenuItem
+            v-for="file in filesStore.recentFiles"
+            :key="file.pathKey"
+            :title="file.filePath"
+            @select="emit('openRecent', file.filePath)"
           >
-            Discard and create new
-          </AlertDialogAction>
-        </AlertDialogFooter>
-      </AlertDialogContent>
-    </AlertDialog>
-  </TooltipProvider>
+            <span class="truncate">{{ file.title }}</span>
+          </DropdownMenuItem>
+        </DropdownMenuContent>
+      </DropdownMenu>
+
+      <Button
+        variant="outline"
+        size="sm"
+        :disabled="!tabsStore.activeTab"
+        @click="emit('save')"
+      >
+        <Save />Save
+      </Button>
+      <Button
+        variant="outline"
+        size="icon"
+        :disabled="!tabsStore.activeTab"
+        aria-label="Save As"
+        title="Save As (Ctrl/Cmd+Shift+S)"
+        @click="emit('saveAs')"
+      >
+        <SaveAll />
+      </Button>
+    </div>
+  </header>
 </template>

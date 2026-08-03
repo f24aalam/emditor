@@ -1,14 +1,19 @@
 import { onMounted, onUnmounted, ref, type Ref } from "vue"
 import { Crepe } from "@milkdown/crepe"
-import { commandsCtx } from "@milkdown/kit/core"
+import { commandsCtx, editorViewCtx } from "@milkdown/kit/core"
 import { redoCommand, undoCommand } from "@milkdown/kit/plugin/history"
+import { TextSelection } from "@milkdown/kit/prose/state"
 import { replaceAll } from "@milkdown/kit/utils"
+
+import type { EditorViewportState } from "@/features/tabs"
 
 interface UseMilkdownEditorOptions {
   root: Ref<HTMLElement | null>
   getMarkdown: () => string
   getReadonly: () => boolean
   onMarkdownChange: (markdown: string) => void
+  getEditorState: () => EditorViewportState
+  onEditorStateChange: (state: EditorViewportState) => void
 }
 
 export interface MilkdownEditorController {
@@ -29,6 +34,47 @@ export function useMilkdownEditor(
   let crepe: Crepe | null = null
   let creation: Promise<void> | null = null
   let disposed = false
+
+  function scrollContainer(): HTMLElement | null {
+    return options.root.value?.parentElement ?? null
+  }
+
+  function captureState(): EditorViewportState | null {
+    if (!isReady.value || !crepe) return null
+    const selection = crepe.editor.action((ctx) => {
+      const current = ctx.get(editorViewCtx).state.selection
+      return { anchor: current.anchor, head: current.head }
+    })
+    const container = scrollContainer()
+    return {
+      selection,
+      scrollTop: container?.scrollTop ?? 0,
+      scrollLeft: container?.scrollLeft ?? 0,
+    }
+  }
+
+  function persistState(): void {
+    const state = captureState()
+    if (state) options.onEditorStateChange(state)
+  }
+
+  function restoreState(): void {
+    if (!crepe) return
+    const saved = options.getEditorState()
+    crepe.editor.action((ctx) => {
+      const view = ctx.get(editorViewCtx)
+      const max = view.state.doc.content.size
+      const anchor = Math.min(saved.selection.anchor, max)
+      const head = Math.min(saved.selection.head, max)
+      view.dispatch(view.state.tr.setSelection(TextSelection.create(view.state.doc, anchor, head)))
+    })
+    requestAnimationFrame(() => {
+      const container = scrollContainer()
+      if (!container) return
+      container.scrollTop = saved.scrollTop
+      container.scrollLeft = saved.scrollLeft
+    })
+  }
 
   function setMarkdown(markdown: string): void {
     if (!isReady.value || !crepe || crepe.getMarkdown() === markdown) return
@@ -87,6 +133,11 @@ export function useMilkdownEditor(
 
       // Props may have changed while the asynchronous editor creation ran.
       setMarkdown(options.getMarkdown())
+      restoreState()
+      const container = scrollContainer()
+      container?.addEventListener("scroll", persistState, { passive: true })
+      options.root.value?.addEventListener("keyup", persistState)
+      options.root.value?.addEventListener("mouseup", persistState)
     } catch (cause: unknown) {
       if (disposed) return
       error.value = "The Markdown editor could not be initialized."
@@ -95,6 +146,10 @@ export function useMilkdownEditor(
   }
 
   async function destroy(): Promise<void> {
+    persistState()
+    scrollContainer()?.removeEventListener("scroll", persistState)
+    options.root.value?.removeEventListener("keyup", persistState)
+    options.root.value?.removeEventListener("mouseup", persistState)
     disposed = true
 
     try {

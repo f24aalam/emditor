@@ -6,10 +6,14 @@ import { languages } from "@codemirror/language-data"
 import { EditorState, Transaction } from "@codemirror/state"
 import { EditorView } from "@codemirror/view"
 
+import type { EditorViewportState } from "@/features/tabs"
+
 interface UseCodeMirrorEditorOptions {
   root: Ref<HTMLElement | null>
   getValue: () => string
   onChange: (value: string) => void
+  getEditorState: () => EditorViewportState
+  onEditorStateChange: (state: EditorViewportState) => void
 }
 
 export interface CodeMirrorEditorController {
@@ -22,6 +26,21 @@ export function useCodeMirrorEditor(
   options: UseCodeMirrorEditorOptions,
 ): CodeMirrorEditorController {
   let view: EditorView | null = null
+
+  function captureState(): EditorViewportState | null {
+    if (!view) return null
+    const selection = view.state.selection.main
+    return {
+      selection: { anchor: selection.anchor, head: selection.head },
+      scrollTop: view.scrollDOM.scrollTop,
+      scrollLeft: view.scrollDOM.scrollLeft,
+    }
+  }
+
+  function persistState(): void {
+    const state = captureState()
+    if (state) options.onEditorStateChange(state)
+  }
 
   function setValue(value: string): void {
     if (!view || view.state.doc.toString() === value) return
@@ -49,16 +68,23 @@ export function useCodeMirrorEditor(
     if (!options.root.value) return
 
     const updateListener = EditorView.updateListener.of((update) => {
-      if (!update.docChanged) return
-
-      const value = update.state.doc.toString()
-      if (value !== options.getValue()) options.onChange(value)
+      if (update.docChanged) {
+        const value = update.state.doc.toString()
+        if (value !== options.getValue()) options.onChange(value)
+      }
+      if (update.selectionSet) persistState()
     })
+
+    const savedState = options.getEditorState()
+    const documentLength = options.getValue().length
+    const anchor = Math.min(savedState.selection.anchor, documentLength)
+    const head = Math.min(savedState.selection.head, documentLength)
 
     view = new EditorView({
       parent: options.root.value,
       state: EditorState.create({
         doc: options.getValue(),
+        selection: { anchor, head },
         extensions: [
           basicSetup,
           markdown({ codeLanguages: languages }),
@@ -67,9 +93,17 @@ export function useCodeMirrorEditor(
         ],
       }),
     })
+    view.scrollDOM.addEventListener("scroll", persistState, { passive: true })
+    requestAnimationFrame(() => {
+      if (!view) return
+      view.scrollDOM.scrollTop = savedState.scrollTop
+      view.scrollDOM.scrollLeft = savedState.scrollLeft
+    })
   })
 
   onUnmounted(() => {
+    persistState()
+    view?.scrollDOM.removeEventListener("scroll", persistState)
     view?.destroy()
     view = null
   })
