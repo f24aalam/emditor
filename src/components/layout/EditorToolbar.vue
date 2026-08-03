@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, ref } from "vue"
+import { ref } from "vue"
 import { FilePenLine, Plus, Redo2, Save, Undo2 } from "@lucide/vue"
 
 import EditorModeSwitcher from "@/components/editor/EditorModeSwitcher.vue"
@@ -32,10 +32,6 @@ const emit = defineEmits<{
 
 const documentsStore = useDocumentsStore()
 const discardDialogOpen = ref(false)
-
-const supportsHistory = computed(
-  () => documentsStore.activeDocument.mode !== "viewer",
-)
 
 function requestNewDocument(): void {
   if (documentsStore.isDirty) {
@@ -82,7 +78,6 @@ function discardAndCreateDocument(): void {
               <Button
                 variant="outline"
                 size="icon"
-                :disabled="!supportsHistory"
                 aria-label="Undo"
                 @click="emit('undo')"
               >
@@ -97,7 +92,6 @@ function discardAndCreateDocument(): void {
               <Button
                 variant="outline"
                 size="icon"
-                :disabled="!supportsHistory"
                 aria-label="Redo"
                 @click="emit('redo')"
               >

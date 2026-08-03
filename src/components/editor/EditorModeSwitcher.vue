@@ -13,7 +13,6 @@ interface ModeOption {
 
 const modes: readonly ModeOption[] = [
   { value: "editor", label: "Editor" },
-  { value: "viewer", label: "Viewer" },
   { value: "source", label: "Source" },
   { value: "split", label: "Split" },
 ]

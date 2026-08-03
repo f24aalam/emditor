@@ -1,6 +1,5 @@
 export type DocumentMode =
   | "editor"
-  | "viewer"
   | "source"
   | "split"
 

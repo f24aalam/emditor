@@ -29,8 +29,6 @@ function undo(): boolean {
       return sourceEditor.value?.undo() ?? false
     case "split":
       return splitView.value?.undo() ?? false
-    case "viewer":
-      return false
   }
 }
 
@@ -42,8 +40,6 @@ function redo(): boolean {
       return sourceEditor.value?.redo() ?? false
     case "split":
       return splitView.value?.redo() ?? false
-    case "viewer":
-      return false
   }
 }
 
@@ -57,13 +53,6 @@ defineExpose({ undo, redo })
       class="workspace-mode workspace-mode--prose"
     >
       <MilkdownEditor ref="milkdownEditor" v-model="markdown" />
-    </div>
-
-    <div
-      v-else-if="documentsStore.activeDocument.mode === 'viewer'"
-      class="workspace-mode workspace-mode--prose"
-    >
-      <MilkdownEditor v-model="markdown" readonly />
     </div>
 
     <div
