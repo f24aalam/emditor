@@ -176,26 +176,6 @@ textarea {
   color: var(--foreground);
 }
 
-.editor-toolbar {
-  z-index: 10;
-  display: grid;
-  min-height: 3.5rem;
-  flex: none;
-  grid-template-columns: minmax(0, 1fr) auto;
-  align-items: center;
-  gap: 1rem;
-  border-bottom: 1px solid var(--border);
-  background: var(--background);
-  padding: 0.5rem 1rem;
-}
-
-.editor-toolbar__document,
-.editor-toolbar__actions {
-  display: flex;
-  min-width: 0;
-  align-items: center;
-}
-
 .tab-bar {
   z-index: 9;
   display: flex;
@@ -271,6 +251,11 @@ textarea {
 
 .document-tab--active {
   background: var(--background);
+  color: var(--foreground);
+}
+
+.document-tab--previewed:not(.document-tab--active) {
+  background: color-mix(in oklab, var(--background) 88%, var(--muted));
   color: var(--foreground);
 }
 
@@ -352,6 +337,7 @@ textarea {
   background: color-mix(in oklab, var(--background) 94%, var(--muted));
 }
 
+.workspace-cache,
 .active-document-workspace {
   display: flex;
   min-width: 0;
@@ -405,50 +391,6 @@ textarea {
   flex: none;
   grid-template-columns: auto minmax(0, 1fr) auto;
   margin: 0.5rem;
-}
-
-.editor-toolbar__document {
-  gap: 0.625rem;
-}
-
-.editor-toolbar__logo {
-  display: grid;
-  width: 2rem;
-  height: 2rem;
-  flex: none;
-  place-items: center;
-  border-radius: 0.625rem;
-  background: var(--primary);
-  color: var(--primary-foreground);
-}
-
-.editor-toolbar__title {
-  display: flex;
-  min-width: 0;
-  align-items: baseline;
-  gap: 0.625rem;
-}
-
-.editor-toolbar__app-name {
-  font-weight: 600;
-  letter-spacing: -0.02em;
-}
-
-.editor-toolbar__document-name {
-  overflow: hidden;
-  color: var(--muted-foreground);
-  font-size: 0.875rem;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.editor-toolbar__status {
-  flex: none;
-}
-
-.editor-toolbar__actions {
-  justify-content: flex-end;
-  gap: 0.5rem;
 }
 
 .markdown-workspace {
@@ -662,16 +604,6 @@ textarea {
   padding: clamp(1.25rem, 3vw, 3rem);
 }
 
-@media (max-width: 900px) {
-  .editor-toolbar {
-    gap: 0.5rem;
-  }
-
-  .editor-toolbar__app-name {
-    display: none;
-  }
-}
-
 @media (max-width: 640px) {
   .tab-bar__actions {
     padding-inline: 0.25rem;
@@ -683,18 +615,6 @@ textarea {
 }
 
 @media (max-width: 700px) {
-  .editor-toolbar {
-    padding-inline: 0.625rem;
-  }
-
-  .editor-toolbar__action-label {
-    display: none;
-  }
-
-  .editor-toolbar__document-name {
-    display: none;
-  }
-
   .split-view {
     grid-template-columns: minmax(0, 1fr);
     grid-template-rows: minmax(0, 1fr) auto minmax(0, 1fr);

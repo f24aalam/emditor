@@ -1,6 +1,11 @@
 import { onMounted, onUnmounted, type Ref } from "vue"
 import { basicSetup } from "codemirror"
-import { redo as redoCommand, undo as undoCommand } from "@codemirror/commands"
+import {
+  redo as redoCommand,
+  redoDepth,
+  undo as undoCommand,
+  undoDepth,
+} from "@codemirror/commands"
 import { markdown } from "@codemirror/lang-markdown"
 import { languages } from "@codemirror/language-data"
 import { EditorState, Transaction } from "@codemirror/state"
@@ -14,12 +19,15 @@ interface UseCodeMirrorEditorOptions {
   onChange: (value: string) => void
   getEditorState: () => EditorViewportState
   onEditorStateChange: (state: EditorViewportState) => void
+  onHistoryStateChange: () => void
 }
 
 export interface CodeMirrorEditorController {
   setValue: (value: string) => void
   undo: () => boolean
   redo: () => boolean
+  canUndo: () => boolean
+  canRedo: () => boolean
 }
 
 export function useCodeMirrorEditor(
@@ -54,14 +62,27 @@ export function useCodeMirrorEditor(
       // Store-driven replacements should not become user undo entries.
       annotations: Transaction.addToHistory.of(false),
     })
+    options.onHistoryStateChange()
   }
 
   function undo(): boolean {
-    return view ? undoCommand(view) : false
+    const handled = view ? undoCommand(view) : false
+    options.onHistoryStateChange()
+    return handled
   }
 
   function redo(): boolean {
-    return view ? redoCommand(view) : false
+    const handled = view ? redoCommand(view) : false
+    options.onHistoryStateChange()
+    return handled
+  }
+
+  function canUndo(): boolean {
+    return view ? undoDepth(view.state) > 0 : false
+  }
+
+  function canRedo(): boolean {
+    return view ? redoDepth(view.state) > 0 : false
   }
 
   onMounted(() => {
@@ -71,6 +92,7 @@ export function useCodeMirrorEditor(
       if (update.docChanged) {
         const value = update.state.doc.toString()
         if (value !== options.getValue()) options.onChange(value)
+        options.onHistoryStateChange()
       }
       if (update.selectionSet) persistState()
     })
@@ -94,6 +116,7 @@ export function useCodeMirrorEditor(
       }),
     })
     view.scrollDOM.addEventListener("scroll", persistState, { passive: true })
+    options.onHistoryStateChange()
     requestAnimationFrame(() => {
       if (!view) return
       view.scrollDOM.scrollTop = savedState.scrollTop
@@ -106,7 +129,8 @@ export function useCodeMirrorEditor(
     view?.scrollDOM.removeEventListener("scroll", persistState)
     view?.destroy()
     view = null
+    options.onHistoryStateChange()
   })
 
-  return { setValue, undo, redo }
+  return { setValue, undo, redo, canUndo, canRedo }
 }

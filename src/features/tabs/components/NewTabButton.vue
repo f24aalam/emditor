@@ -9,7 +9,7 @@ defineEmits<{ click: [] }>()
     type="button"
     class="new-tab-button"
     aria-label="New document tab"
-    title="New tab (Ctrl/Cmd+T)"
+    title="New tab (Ctrl/Cmd+N)"
     @click="$emit('click')"
   >
     <Plus class="size-4" />

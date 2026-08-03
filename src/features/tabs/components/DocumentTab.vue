@@ -8,6 +8,7 @@ interface Props {
   active: boolean
   modified: boolean
   dragging: boolean
+  previewed: boolean
 }
 
 defineProps<Props>()
@@ -34,6 +35,7 @@ function middleClick(event: MouseEvent): void {
     :class="{
       'document-tab--active': active,
       'document-tab--dragging': dragging,
+      'document-tab--previewed': previewed,
     }"
     draggable="true"
     @auxclick="middleClick"

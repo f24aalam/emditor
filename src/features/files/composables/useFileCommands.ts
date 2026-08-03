@@ -67,7 +67,7 @@ export function createFileCommands(
 
   async function writeTo(tabId: string, path: string): Promise<boolean> {
     const tab = tabsStore.tabs.find((candidate) => candidate.id === tabId)
-    if (!tab) return false
+    if (!tab || filesStore.busyTabIds.includes(tabId)) return false
     filesStore.setBusy(tabId, true)
     try {
       const resolved = await files.resolve(path)

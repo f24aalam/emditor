@@ -70,6 +70,21 @@ describe("file commands", () => {
     expect(filesStore.recentFiles[0]?.filePath).toBe("/docs/notes.md")
   })
 
+  it("writes the active Markdown file and marks it saved", async () => {
+    const { tabsStore, files, commands } = setup()
+    const { id } = tabsStore.openFile({
+      title: "notes.md",
+      filePath: "/docs/notes.md",
+      pathKey: "/docs/notes.md",
+      content: "saved",
+    })
+    tabsStore.updateContent(id, "updated")
+
+    await expect(commands.save()).resolves.toBe(true)
+    expect(files.writes).toEqual([{ path: "/docs/notes.md", content: "updated" }])
+    expect(tabsStore.isModified(id)).toBe(false)
+  })
+
   it("does not overwrite a path owned by another tab", async () => {
     const { tabsStore, files, dialogs, commands } = setup()
     tabsStore.openFile({

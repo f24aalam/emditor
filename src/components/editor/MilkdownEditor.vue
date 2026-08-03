@@ -26,6 +26,7 @@ const props = withDefaults(defineProps<Props>(), {
 const emit = defineEmits<{
   "update:modelValue": [value: string]
   "update:editorState": [value: EditorViewportState]
+  "historyStateChange": []
 }>()
 
 const editorRoot = ref<HTMLElement | null>(null)
@@ -37,6 +38,8 @@ const {
   setReadonly,
   undo,
   redo,
+  canUndo,
+  canRedo,
 } = useMilkdownEditor({
   root: editorRoot,
   getMarkdown: () => props.modelValue,
@@ -44,12 +47,13 @@ const {
   onMarkdownChange: (markdown) => emit("update:modelValue", markdown),
   getEditorState: () => props.editorState,
   onEditorStateChange: (state) => emit("update:editorState", state),
+  onHistoryStateChange: () => emit("historyStateChange"),
 })
 
 watch(() => props.modelValue, setMarkdown)
 watch(() => props.readonly, setReadonly)
 
-defineExpose({ undo, redo })
+defineExpose({ undo, redo, canUndo, canRedo })
 </script>
 
 <template>

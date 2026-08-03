@@ -35,8 +35,17 @@ export default defineConfig(async () => ({
         }
       : undefined,
     watch: {
-      // 3. tell Vite to ignore watching `src-tauri`
-      ignored: ["**/src-tauri/**"],
+      // 3. tell Vite to ignore Tauri sources and documents being edited.
+      // A Markdown file inside the repository (for example README.md) is app
+      // data, not a frontend module. Reloading the webview while Rust is
+      // completing a save interrupts the command and leaves the tab dirty.
+      ignored: [
+        "**/src-tauri/**",
+        "**/*.md",
+        "**/*.markdown",
+        "**/*.mdown",
+        "**/*.mkd",
+      ],
     },
   },
 }));

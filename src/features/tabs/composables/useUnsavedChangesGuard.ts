@@ -1,4 +1,4 @@
-import { computed, onUnmounted, ref } from "vue"
+import { computed, nextTick, onUnmounted, ref } from "vue"
 
 import type { FileCommands } from "@/features/files"
 import type { WindowRepository } from "@/features/tabs/model/window.repository"
@@ -20,7 +20,8 @@ export function useUnsavedChangesGuard(
   let unlisten: (() => void) | null = null
 
   const dialogOpen = computed(
-    () => pendingWindowClose.value || pendingTabId.value !== null,
+    () => !processing.value
+      && (pendingWindowClose.value || pendingTabId.value !== null),
   )
   const dirtyTabs = computed(() => tabsStore.tabs.filter((tab) => tabsStore.isModified(tab.id)))
   const dialogTitle = computed(() => {
@@ -61,6 +62,11 @@ export function useUnsavedChangesGuard(
     if (processing.value) return
     processing.value = true
     try {
+      // Remove the webview modal and its focus trap before opening a native
+      // Save As dialog. Running both modal systems together breaks focus on
+      // some Linux desktop environments.
+      await nextTick()
+
       if (pendingWindowClose.value) {
         for (const tab of dirtyTabs.value) {
           if (!await fileCommands.save(tab.id)) return
@@ -113,6 +119,7 @@ export function useUnsavedChangesGuard(
     dialogTitle,
     processing,
     requestClose,
+    requestWindowClose,
     saveAndContinue,
     discardAndContinue,
     cancel,

@@ -1,14 +1,13 @@
 <script setup lang="ts">
 import {
   AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
   AlertDialogContent,
   AlertDialogDescription,
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
+import { Button } from "@/components/ui/button"
 
 interface Props {
   open: boolean
@@ -30,19 +29,29 @@ defineEmits<{ save: []; discard: []; cancel: [] }>()
         </AlertDialogDescription>
       </AlertDialogHeader>
       <AlertDialogFooter>
-        <AlertDialogCancel :disabled="processing" @click="$emit('cancel')">
+        <Button
+          type="button"
+          variant="outline"
+          :disabled="processing"
+          @click="$emit('cancel')"
+        >
           Cancel
-        </AlertDialogCancel>
-        <AlertDialogAction
+        </Button>
+        <Button
+          type="button"
           variant="destructive"
           :disabled="processing"
           @click="$emit('discard')"
         >
           Don’t Save
-        </AlertDialogAction>
-        <AlertDialogAction :disabled="processing" @click="$emit('save')">
+        </Button>
+        <Button
+          type="button"
+          :disabled="processing"
+          @click="$emit('save')"
+        >
           Save
-        </AlertDialogAction>
+        </Button>
       </AlertDialogFooter>
     </AlertDialogContent>
   </AlertDialog>

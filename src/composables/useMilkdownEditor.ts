@@ -2,6 +2,7 @@ import { onMounted, onUnmounted, ref, type Ref } from "vue"
 import { Crepe } from "@milkdown/crepe"
 import { commandsCtx, editorViewCtx } from "@milkdown/kit/core"
 import { redoCommand, undoCommand } from "@milkdown/kit/plugin/history"
+import { redoDepth, undoDepth } from "@milkdown/kit/prose/history"
 import { TextSelection } from "@milkdown/kit/prose/state"
 import { replaceAll } from "@milkdown/kit/utils"
 
@@ -14,6 +15,7 @@ interface UseMilkdownEditorOptions {
   onMarkdownChange: (markdown: string) => void
   getEditorState: () => EditorViewportState
   onEditorStateChange: (state: EditorViewportState) => void
+  onHistoryStateChange: () => void
 }
 
 export interface MilkdownEditorController {
@@ -23,6 +25,8 @@ export interface MilkdownEditorController {
   setReadonly: (readonly: boolean) => void
   undo: () => boolean
   redo: () => boolean
+  canUndo: () => boolean
+  canRedo: () => boolean
 }
 
 export function useMilkdownEditor(
@@ -82,6 +86,7 @@ export function useMilkdownEditor(
     // Milkdown's listener will run for this action. The equality check in the
     // listener keeps this external synchronization from echoing back to Pinia.
     crepe.editor.action(replaceAll(markdown))
+    options.onHistoryStateChange()
   }
 
   function setReadonly(readonly: boolean): void {
@@ -92,9 +97,11 @@ export function useMilkdownEditor(
   function runHistoryCommand(command: typeof undoCommand | typeof redoCommand): boolean {
     if (!isReady.value || !crepe || crepe.readonly) return false
 
-    return crepe.editor.action((ctx) =>
+    const handled = crepe.editor.action((ctx) =>
       ctx.get(commandsCtx).call(command.key),
     )
+    options.onHistoryStateChange()
+    return handled
   }
 
   function undo(): boolean {
@@ -103,6 +110,16 @@ export function useMilkdownEditor(
 
   function redo(): boolean {
     return runHistoryCommand(redoCommand)
+  }
+
+  function canUndo(): boolean {
+    if (!isReady.value || !crepe || crepe.readonly) return false
+    return crepe.editor.action((ctx) => undoDepth(ctx.get(editorViewCtx).state) > 0)
+  }
+
+  function canRedo(): boolean {
+    if (!isReady.value || !crepe || crepe.readonly) return false
+    return crepe.editor.action((ctx) => redoDepth(ctx.get(editorViewCtx).state) > 0)
   }
 
   async function initialize(): Promise<void> {
@@ -119,6 +136,7 @@ export function useMilkdownEditor(
 
     instance.on((listener) => {
       listener.markdownUpdated((_ctx, markdown) => {
+        options.onHistoryStateChange()
         if (disposed || markdown === options.getMarkdown()) return
         options.onMarkdownChange(markdown)
       })
@@ -138,6 +156,7 @@ export function useMilkdownEditor(
       container?.addEventListener("scroll", persistState, { passive: true })
       options.root.value?.addEventListener("keyup", persistState)
       options.root.value?.addEventListener("mouseup", persistState)
+      options.onHistoryStateChange()
     } catch (cause: unknown) {
       if (disposed) return
       error.value = "The Markdown editor could not be initialized."
@@ -161,6 +180,7 @@ export function useMilkdownEditor(
     const instance = crepe
     crepe = null
     isReady.value = false
+    options.onHistoryStateChange()
 
     if (instance) {
       try {
@@ -186,5 +206,7 @@ export function useMilkdownEditor(
     setReadonly,
     undo,
     redo,
+    canUndo,
+    canRedo,
   }
 }

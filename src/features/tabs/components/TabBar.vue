@@ -1,15 +1,42 @@
 <script setup lang="ts">
-import { nextTick, watch } from "vue"
+import { computed, nextTick, onUnmounted, watch } from "vue"
 
 import DocumentTab from "@/features/tabs/components/DocumentTab.vue"
 import NewTabButton from "@/features/tabs/components/NewTabButton.vue"
+import { useDeferredTabActivation } from "@/features/tabs/composables/useDeferredTabActivation"
 import { useTabDrag } from "@/features/tabs/composables/useTabDrag"
 import { useTabsStore } from "@/features/tabs"
 
 const emit = defineEmits<{ close: [tabId: string]; new: [] }>()
 const tabsStore = useTabsStore()
 const { draggedTabId, start, over, end } = useTabDrag()
-let lastWheelTabChange = 0
+const deferredActivation = useDeferredTabActivation({
+  getTabIds: () => tabsStore.tabs.map((tab) => tab.id),
+  getActiveTabId: () => tabsStore.activeTabId,
+  activate: tabsStore.activateTab,
+})
+const visibleTabId = computed(
+  () => deferredActivation.pendingTabId.value ?? tabsStore.activeTabId,
+)
+
+function activateTab(tabId: string): void {
+  deferredActivation.activateImmediately(tabId)
+}
+
+function requestClose(tabId: string): void {
+  deferredActivation.cancel()
+  emit("close", tabId)
+}
+
+function createTab(): void {
+  deferredActivation.cancel()
+  emit("new")
+}
+
+function startDragging(tabId: string, event: DragEvent): void {
+  deferredActivation.cancel()
+  start(tabId, event)
+}
 
 function scrollTabs(event: WheelEvent): void {
   const element = event.currentTarget
@@ -17,19 +44,11 @@ function scrollTabs(event: WheelEvent): void {
 
   if (event.shiftKey && !event.ctrlKey && !event.metaKey) {
     event.preventDefault()
-    const now = performance.now()
-    if (now - lastWheelTabChange < 140) return
     const delta = Math.abs(event.deltaY) >= Math.abs(event.deltaX)
       ? event.deltaY
       : event.deltaX
     if (delta === 0) return
-    const currentIndex = tabsStore.tabs.findIndex(
-      (tab) => tab.id === tabsStore.activeTabId,
-    )
-    const targetIndex = currentIndex + (delta > 0 ? 1 : -1)
-    if (targetIndex < 0 || targetIndex >= tabsStore.tabs.length) return
-    tabsStore.activateByPosition(targetIndex)
-    lastWheelTabChange = now
+    deferredActivation.step(delta > 0 ? 1 : -1)
     return
   }
 
@@ -47,6 +66,7 @@ function scrollTabs(event: WheelEvent): void {
 
 function navigate(event: KeyboardEvent): void {
   if (!tabsStore.activeTabId) return
+  deferredActivation.cancel()
   let target: string | null = null
   if (event.key === "ArrowRight") {
     tabsStore.activateRelative(1)
@@ -66,7 +86,7 @@ function navigate(event: KeyboardEvent): void {
 }
 
 watch(
-  () => tabsStore.activeTabId,
+  visibleTabId,
   (id) => void nextTick(() => {
     if (id) document.getElementById(`tab-${id}`)?.scrollIntoView({
       block: "nearest",
@@ -74,6 +94,20 @@ watch(
     })
   }),
 )
+
+watch(
+  () => tabsStore.activeTabId,
+  () => {
+    if (deferredActivation.pendingTabId.value) deferredActivation.cancel()
+  },
+)
+
+watch(
+  () => tabsStore.tabs.map((tab) => tab.id).join("\u0000"),
+  () => deferredActivation.cancel(),
+)
+
+onUnmounted(deferredActivation.dispose)
 </script>
 
 <template>
@@ -87,15 +121,16 @@ watch(
           :active="tab.id === tabsStore.activeTabId"
           :modified="tabsStore.isModified(tab.id)"
           :dragging="tab.id === draggedTabId"
-          @activate="tabsStore.activateTab(tab.id)"
-          @close="emit('close', tab.id)"
+          :previewed="tab.id === deferredActivation.pendingTabId.value"
+          @activate="activateTab(tab.id)"
+          @close="requestClose(tab.id)"
           @navigate="navigate"
-          @dragstart="start(tab.id, $event)"
+          @dragstart="startDragging(tab.id, $event)"
           @dragover="over(tab.id, $event)"
           @dragend="end"
         />
       </div>
-      <NewTabButton @click="emit('new')" />
+      <NewTabButton @click="createTab" />
     </div>
     <div class="tab-bar__actions">
       <slot name="actions" />

@@ -18,6 +18,8 @@ interface Props {
 interface EditorCommands {
   undo: () => boolean
   redo: () => boolean
+  canUndo: () => boolean
+  canRedo: () => boolean
 }
 
 const props = defineProps<Props>()
@@ -26,6 +28,7 @@ const emit = defineEmits<{
   "update:modelValue": [value: string]
   "update:sourceState": [value: EditorViewportState]
   "update:previewState": [value: PreviewViewportState]
+  "historyStateChange": []
 }>()
 
 const sourceEditor = ref<EditorCommands | null>(null)
@@ -59,7 +62,15 @@ function redo(): boolean {
   return sourceEditor.value?.redo() ?? false
 }
 
-defineExpose({ undo, redo })
+function canUndo(): boolean {
+  return sourceEditor.value?.canUndo() ?? false
+}
+
+function canRedo(): boolean {
+  return sourceEditor.value?.canRedo() ?? false
+}
+
+defineExpose({ undo, redo, canUndo, canRedo })
 </script>
 
 <template>
@@ -72,6 +83,7 @@ defineExpose({ undo, redo })
         :editor-state="sourceState"
         @update:model-value="emit('update:modelValue', $event)"
         @update:editor-state="emit('update:sourceState', $event)"
+        @history-state-change="emit('historyStateChange')"
       />
     </section>
 

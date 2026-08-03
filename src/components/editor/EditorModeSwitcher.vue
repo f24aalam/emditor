@@ -16,6 +16,7 @@ const modes: readonly ModeOption[] = [
   { value: "split", label: "Split" },
 ]
 
+const emit = defineEmits<{ select: [mode: WorkspaceMode] }>()
 const tabsStore = useTabsStore()
 
 function isDocumentMode(value: unknown): value is WorkspaceMode {
@@ -25,9 +26,7 @@ function isDocumentMode(value: unknown): value is WorkspaceMode {
 
 function selectMode(value: unknown): void {
   // A controlled group must never deselect the active document mode.
-  if (isDocumentMode(value) && tabsStore.activeTabId) {
-    tabsStore.setMode(tabsStore.activeTabId, value)
-  }
+  if (isDocumentMode(value) && tabsStore.activeTabId) emit("select", value)
 }
 </script>
 

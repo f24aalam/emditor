@@ -1,12 +1,21 @@
 <script setup lang="ts">
-import { onMounted, ref } from "vue"
+import { computed, onMounted, ref } from "vue"
 import { CircleAlert, X } from "@lucide/vue"
 
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { Button } from "@/components/ui/button"
-import EditorToolbar from "@/components/layout/EditorToolbar.vue"
 import EditorModeSwitcher from "@/components/editor/EditorModeSwitcher.vue"
+import {
+  APPLICATION_COMMAND_IDS,
+  createApplicationCommands,
+  type ActiveEditorCommands,
+} from "@/features/commands"
 import { createFileCommands, useFilesStore } from "@/features/files"
+import {
+  createNativeMenuController,
+  createNativeMenuState,
+  useNativeMenu,
+} from "@/features/menu"
 import { createSessionController } from "@/features/session"
 import ActiveDocumentWorkspace from "@/features/tabs/components/ActiveDocumentWorkspace.vue"
 import EmptyWorkspace from "@/features/tabs/components/EmptyWorkspace.vue"
@@ -14,20 +23,16 @@ import TabBar from "@/features/tabs/components/TabBar.vue"
 import UnsavedChangesDialog from "@/features/tabs/components/UnsavedChangesDialog.vue"
 import { useKeyboardShortcuts } from "@/features/tabs/composables/useKeyboardShortcuts"
 import { useUnsavedChangesGuard } from "@/features/tabs/composables/useUnsavedChangesGuard"
-import { useTabsStore } from "@/features/tabs"
+import { useTabsStore, type WorkspaceMode } from "@/features/tabs"
 import { TauriFileDialogRepository } from "@/infrastructure/tauri/tauri-dialog.repository"
 import { TauriFileRepository } from "@/infrastructure/tauri/tauri-file.repository"
 import { TauriSessionRepository } from "@/infrastructure/tauri/tauri-session.repository"
 import { TauriWindowRepository } from "@/infrastructure/tauri/tauri-window.repository"
 
-interface EditorCommands {
-  undo: () => boolean
-  redo: () => boolean
-}
-
 const tabsStore = useTabsStore()
 const filesStore = useFilesStore()
-const workspace = ref<EditorCommands | null>(null)
+const workspace = ref<ActiveEditorCommands | null>(null)
+const editorCommandRevision = ref(0)
 const ready = ref(false)
 
 const fileCommands = createFileCommands({
@@ -47,24 +52,49 @@ const closeGuard = useUnsavedChangesGuard(
   session,
 )
 
-function createTab(): void {
-  tabsStore.createTab()
-}
-
-function closeActiveTab(): void {
-  if (tabsStore.activeTabId) closeGuard.requestClose(tabsStore.activeTabId)
-}
-
-useKeyboardShortcuts({
-  newTab: createTab,
-  closeTab: closeActiveTab,
-  nextTab: () => tabsStore.activateRelative(1),
-  previousTab: () => tabsStore.activateRelative(-1),
-  activateByPosition: tabsStore.activateByPosition,
-  open: () => void fileCommands.open(),
-  save: () => void fileCommands.save(),
-  saveAs: () => void fileCommands.saveAs(),
+const appCommands = createApplicationCommands({
+  tabsStore,
+  files: fileCommands,
+  close: {
+    closeTab: closeGuard.requestClose,
+    closeWindow: closeGuard.requestWindowClose,
+  },
+  activeEditor: () => workspace.value,
+  reportError: filesStore.setError,
+  reportUnknown: (id) => console.warn(`Ignoring unknown application command: ${id}`),
 })
+
+const menuState = computed(() => {
+  editorCommandRevision.value
+  return createNativeMenuState({
+    tabsStore,
+    filesStore,
+    activeEditor: () => workspace.value,
+  })
+})
+
+const nativeMenu = createNativeMenuController({
+  execute: appCommands.execute,
+  openRecent: appCommands.openRecent,
+  reportError: filesStore.setError,
+})
+
+useNativeMenu({
+  ready,
+  state: menuState,
+  controller: nativeMenu,
+  reportError: filesStore.setError,
+})
+
+useKeyboardShortcuts({ activateByPosition: tabsStore.activateByPosition })
+
+function run(id: string): void {
+  void appCommands.execute(id)
+}
+
+function selectMode(mode: WorkspaceMode): void {
+  void appCommands.setWorkspaceMode(mode)
+}
 
 onMounted(async () => {
   await session.restore()
@@ -76,18 +106,12 @@ onMounted(async () => {
 
 <template>
   <div class="app-shell">
-    <EditorToolbar
-      @undo="workspace?.undo()"
-      @redo="workspace?.redo()"
-      @open="fileCommands.open()"
-      @save="fileCommands.save()"
-      @save-as="fileCommands.saveAs()"
-      @open-recent="fileCommands.openPath($event)"
-    />
-
-    <TabBar @new="createTab" @close="closeGuard.requestClose">
+    <TabBar
+      @new="run(APPLICATION_COMMAND_IDS.newTab)"
+      @close="closeGuard.requestClose"
+    >
       <template #actions>
-        <EditorModeSwitcher />
+        <EditorModeSwitcher @select="selectMode" />
       </template>
     </TabBar>
 
@@ -109,10 +133,16 @@ onMounted(async () => {
     <ActiveDocumentWorkspace
       v-else-if="tabsStore.activeTab"
       ref="workspace"
+      @history-state-change="editorCommandRevision += 1"
     />
-    <EmptyWorkspace v-else @new="createTab" @open="fileCommands.open()" />
+    <EmptyWorkspace
+      v-else
+      @new="run(APPLICATION_COMMAND_IDS.newTab)"
+      @open="run(APPLICATION_COMMAND_IDS.open)"
+    />
 
     <UnsavedChangesDialog
+      v-if="closeGuard.dialogOpen.value"
       :open="closeGuard.dialogOpen.value"
       :title="closeGuard.dialogTitle.value"
       :processing="closeGuard.processing.value"
