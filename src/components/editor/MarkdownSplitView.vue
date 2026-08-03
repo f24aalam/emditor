@@ -3,6 +3,7 @@ import { ref } from "vue"
 
 import MarkdownSourceEditor from "@/components/editor/MarkdownSourceEditor.vue"
 import MilkdownEditor from "@/components/editor/MilkdownEditor.vue"
+import { Separator } from "@/components/ui/separator"
 
 interface Props {
   modelValue: string
@@ -42,6 +43,15 @@ defineExpose({ undo, redo })
         @update:model-value="emit('update:modelValue', $event)"
       />
     </section>
+
+    <Separator
+      orientation="vertical"
+      class="split-view__divider split-view__divider--vertical"
+    />
+    <Separator
+      orientation="horizontal"
+      class="split-view__divider split-view__divider--horizontal"
+    />
 
     <section class="split-view__panel split-view__preview" aria-label="Rendered preview">
       <div class="split-view__heading">Preview</div>

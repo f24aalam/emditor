@@ -1,6 +1,8 @@
 <script setup lang="ts">
-import { ref } from "vue"
-
+import {
+  ToggleGroup,
+  ToggleGroupItem,
+} from "@/components/ui/toggle-group"
 import { useDocumentsStore } from "@/stores/documents"
 import type { DocumentMode } from "@/types/document"
 
@@ -17,51 +19,37 @@ const modes: readonly ModeOption[] = [
 ]
 
 const documentsStore = useDocumentsStore()
-const modeButtons = ref<HTMLButtonElement[]>([])
 
-function selectMode(mode: DocumentMode): void {
-  documentsStore.setMode(mode)
+function isDocumentMode(value: unknown): value is DocumentMode {
+  return typeof value === "string"
+    && modes.some((mode) => mode.value === value)
 }
 
-function handleKeydown(event: KeyboardEvent, index: number): void {
-  let nextIndex: number | null = null
-
-  if (event.key === "ArrowRight" || event.key === "ArrowDown") {
-    nextIndex = (index + 1) % modes.length
-  } else if (event.key === "ArrowLeft" || event.key === "ArrowUp") {
-    nextIndex = (index - 1 + modes.length) % modes.length
-  } else if (event.key === "Home") {
-    nextIndex = 0
-  } else if (event.key === "End") {
-    nextIndex = modes.length - 1
-  }
-
-  if (nextIndex === null) return
-
-  event.preventDefault()
-  const mode = modes[nextIndex]
-  documentsStore.setMode(mode.value)
-  modeButtons.value[nextIndex]?.focus()
+function selectMode(value: unknown): void {
+  // A controlled group must never deselect the active document mode.
+  if (isDocumentMode(value)) documentsStore.setMode(value)
 }
 </script>
 
 <template>
-  <div class="mode-switcher" role="radiogroup" aria-label="Document mode">
-    <button
-      v-for="(mode, index) in modes"
+  <ToggleGroup
+    type="single"
+    orientation="horizontal"
+    variant="outline"
+    size="sm"
+    :model-value="documentsStore.activeDocument.mode"
+    aria-label="Document mode"
+    class="bg-muted/50 p-0.5"
+    @update:model-value="selectMode"
+  >
+    <ToggleGroupItem
+      v-for="mode in modes"
       :key="mode.value"
-      ref="modeButtons"
-      type="button"
-      role="radio"
-      class="mode-switcher__button"
-      :class="{ 'mode-switcher__button--active': documentsStore.activeDocument.mode === mode.value }"
-      :aria-checked="documentsStore.activeDocument.mode === mode.value"
+      :value="mode.value"
       :aria-label="`Switch to ${mode.label} mode`"
-      :tabindex="documentsStore.activeDocument.mode === mode.value ? 0 : -1"
-      @click="selectMode(mode.value)"
-      @keydown="handleKeydown($event, index)"
+      class="border-0 data-[state=on]:bg-background data-[state=on]:text-foreground data-[state=on]:shadow-sm"
     >
       {{ mode.label }}
-    </button>
-  </div>
+    </ToggleGroupItem>
+  </ToggleGroup>
 </template>

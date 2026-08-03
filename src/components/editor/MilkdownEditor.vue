@@ -1,9 +1,15 @@
 <script setup lang="ts">
 import { ref, watch } from "vue"
+import { CircleAlert } from "@lucide/vue"
 
 import "@milkdown/crepe/theme/common/style.css"
 import "@milkdown/crepe/theme/frame.css"
 
+import {
+  Alert,
+  AlertDescription,
+  AlertTitle,
+} from "@/components/ui/alert"
 import { useMilkdownEditor } from "@/composables/useMilkdownEditor"
 
 interface Props {
@@ -47,14 +53,15 @@ defineExpose({ undo, redo })
     :class="{ 'milkdown-editor--readonly': readonly }"
     :aria-busy="!isReady && !error"
   >
-    <div
+    <Alert
       v-if="error"
+      variant="destructive"
       class="editor-error"
-      role="alert"
     >
-      <strong>Unable to open the Markdown editor.</strong>
-      <span>{{ error }}</span>
-    </div>
+      <CircleAlert />
+      <AlertTitle>Unable to open the Markdown editor</AlertTitle>
+      <AlertDescription>{{ error }}</AlertDescription>
+    </Alert>
 
     <div
       ref="editorRoot"
