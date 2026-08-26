@@ -19,6 +19,7 @@ interface FileCommandDependencies {
 export interface FileCommands {
   open: () => Promise<boolean>
   openPath: (path: string, recent?: RecentFile) => Promise<boolean>
+  openCliPath: (path: string) => Promise<{ id: string; created: boolean } | null>
   save: (tabId?: string) => Promise<boolean>
   saveAs: (tabId?: string) => Promise<boolean>
 }
@@ -40,19 +41,31 @@ export function createFileCommands(
 ): FileCommands {
   const { tabsStore, filesStore, files, dialogs } = dependencies
 
-  async function openPath(path: string, recent?: RecentFile): Promise<boolean> {
+  async function openPathResult(
+    path: string,
+    recent?: RecentFile,
+    allowMissing = false,
+  ): Promise<{ id: string; created: boolean } | null> {
     const recentEntry = recent
       ?? filesStore.recentFiles.find((file) => file.filePath === path)
     try {
-      const file = await files.read(path)
-      tabsStore.openFile(file)
+      const file = await files.read(path, allowMissing)
+      const result = tabsStore.openFile(file)
       filesStore.addRecentFile(file)
-      return true
+      return result
     } catch (cause: unknown) {
       if (recentEntry) filesStore.removeRecentFile(recentEntry.pathKey)
       filesStore.setError(errorText(cause, `Unable to open “${recentEntry?.title ?? path}”`))
-      return false
+      return null
     }
+  }
+
+  async function openPath(path: string, recent?: RecentFile): Promise<boolean> {
+    return (await openPathResult(path, recent)) !== null
+  }
+
+  function openCliPath(path: string): Promise<{ id: string; created: boolean } | null> {
+    return openPathResult(path, undefined, true)
   }
 
   async function open(): Promise<boolean> {
@@ -110,5 +123,5 @@ export function createFileCommands(
     return tab.filePath ? writeTo(tab.id, tab.filePath) : saveAs(tab.id)
   }
 
-  return { open, openPath, save, saveAs }
+  return { open, openPath, openCliPath, save, saveAs }
 }

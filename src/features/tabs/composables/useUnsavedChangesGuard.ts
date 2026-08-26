@@ -51,9 +51,13 @@ export function useUnsavedChangesGuard(
     if (processing.value || pendingWindowClose.value) return
     if (!tabsStore.hasModifiedTabs) {
       processing.value = true
-      await session.flush()
-      await windowRepository.destroy()
-      return
+      try {
+        await session.flush()
+        await windowRepository.destroy()
+        return
+      } finally {
+        processing.value = false
+      }
     }
     pendingWindowClose.value = true
   }

@@ -1,0 +1,11 @@
+{
+  "bundle": {
+    "targets": ["app", "dmg"],
+    "macOS": {
+      "files": {
+        "MacOS/emditor": "binaries/emditor",
+        "MacOS/emd": "binaries/emd"
+      }
+    }
+  }
+}

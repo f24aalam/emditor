@@ -4,8 +4,8 @@ use crate::{
 };
 
 #[tauri::command]
-pub fn read_markdown_file(path: String) -> Result<OpenedMarkdownFile, String> {
-    file_service::read(&path).map_err(|error| error.to_string())
+pub fn read_markdown_file(path: String, allow_missing: bool) -> Result<OpenedMarkdownFile, String> {
+    file_service::read(&path, allow_missing).map_err(|error| error.to_string())
 }
 
 #[tauri::command]

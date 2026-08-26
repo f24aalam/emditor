@@ -4,7 +4,7 @@ import { STARTER_MARKDOWN, useTabsStore } from "@/features/tabs"
 import { useFilesStore } from "@/features/files"
 
 interface SessionController {
-  restore: () => Promise<void>
+  restore: () => Promise<string | null>
   start: () => void
   flush: () => Promise<void>
   stop: () => Promise<void>
@@ -52,25 +52,24 @@ export function createSessionController(
     }, 300)
   }
 
-  async function restore(): Promise<void> {
+  async function restore(): Promise<string | null> {
     try {
       const raw = await repository.load()
       if (raw === null || raw === undefined) {
-        tabsStore.createTab(STARTER_MARKDOWN)
-        return
+        return tabsStore.createTab(STARTER_MARKDOWN)
       }
       const restored = parseSessionSnapshot(raw)
       if (!restored) {
         filesStore.setError("The previous session could not be restored because its data was invalid.")
-        tabsStore.createTab(STARTER_MARKDOWN)
-        return
+        return tabsStore.createTab(STARTER_MARKDOWN)
       }
       tabsStore.replaceTabs(restored.tabs, restored.activeTabId)
       filesStore.replaceRecentFiles(restored.recentFiles)
+      return null
     } catch (cause: unknown) {
       console.error("Failed to restore the Emditor session", cause)
       filesStore.setError("The previous session could not be restored. A new document was opened instead.")
-      tabsStore.createTab(STARTER_MARKDOWN)
+      return tabsStore.createTab(STARTER_MARKDOWN)
     }
   }
 

@@ -17,6 +17,7 @@ describe("application commands", () => {
     const files: FileCommands = {
       open: vi.fn(async () => true),
       openPath: vi.fn(async () => true),
+      openCliPath: vi.fn(async () => null),
       save: vi.fn(async () => true),
       saveAs: vi.fn(async () => true),
     }

@@ -17,6 +17,7 @@ interface NativeMenuHandlers {
   execute: (id: string) => Promise<boolean>
   openRecent: (path: string) => Promise<boolean>
   reportError: (message: string) => void
+  manageShellCommands?: (install: boolean) => Promise<boolean>
 }
 
 interface NativeMenuControllerOptions {
@@ -108,6 +109,19 @@ export function createNativeMenuController(
   }
 
   function action(id: string): void {
+    if (
+      id === NATIVE_MENU_IDS.appInstallShellCommands
+      || id === NATIVE_MENU_IDS.appUninstallShellCommands
+    ) {
+      const operation = handlers.manageShellCommands
+      if (operation) {
+        runAction(
+          () => operation(id === NATIVE_MENU_IDS.appInstallShellCommands),
+          "Unable to update the Emditor shell commands",
+        )
+      }
+      return
+    }
     runAction(
       () => handlers.execute(id),
       "Unable to run the selected menu command",
@@ -157,6 +171,15 @@ export function createNativeMenuController(
   async function buildApplicationMenu(): Promise<Submenu> {
     const items: Array<MenuItem | PredefinedMenuItem> = [
       await predefined({ item: { About: { name: "emditor", version: "0.1.0" } } }),
+      await separator(),
+      await commandItem(
+        NATIVE_MENU_IDS.appInstallShellCommands,
+        "Install Emditor Shell Commands…",
+      ),
+      await commandItem(
+        NATIVE_MENU_IDS.appUninstallShellCommands,
+        "Uninstall Emditor Shell Commands…",
+      ),
       await separator(),
       await predefined({ item: "Services" }),
       await separator(),

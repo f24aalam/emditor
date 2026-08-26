@@ -1,0 +1,15 @@
+{
+  "bundle": {
+    "targets": ["nsis"],
+    "resources": {
+      "binaries/emditor.exe": "emditor.exe",
+      "binaries/emd.exe": "emd.exe"
+    },
+    "windows": {
+      "nsis": {
+        "installMode": "currentUser",
+        "installerHooks": "windows/installer-hooks.nsh"
+      }
+    }
+  }
+}

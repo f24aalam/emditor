@@ -14,7 +14,15 @@ class FakeFiles implements FileRepository {
   writes: Array<{ path: string; content: string }> = []
   shouldFail = false
 
-  read(path: string): Promise<OpenedMarkdownFile> {
+  read(path: string, allowMissing = false): Promise<OpenedMarkdownFile> {
+    if (allowMissing && this.shouldFail) {
+      return Promise.resolve({
+        title: "missing.md",
+        filePath: path,
+        pathKey: path.toLowerCase(),
+        content: "",
+      })
+    }
     if (this.shouldFail) return Promise.reject(new Error("not found"))
     return Promise.resolve({
       title: "notes.md",
@@ -112,5 +120,30 @@ describe("file commands", () => {
     await expect(commands.openPath("/docs/missing.md")).resolves.toBe(false)
     expect(filesStore.recentFiles).toHaveLength(0)
     expect(filesStore.errorMessage).toContain("missing.md")
+  })
+
+  it("opens a missing CLI file as a blank path-associated tab", async () => {
+    const { tabsStore, files, commands } = setup()
+    files.shouldFail = true
+
+    await expect(commands.openCliPath("/docs/missing.md")).resolves.toMatchObject({
+      created: true,
+    })
+    expect(tabsStore.activeTab).toMatchObject({
+      title: "missing.md",
+      filePath: "/docs/missing.md",
+      content: "",
+      lastSavedContent: "",
+    })
+
+    const tabId = tabsStore.activeTab!.id
+    tabsStore.updateContent(tabId, "created later")
+    files.shouldFail = false
+    await expect(commands.save(tabId)).resolves.toBe(true)
+    expect(files.writes).toEqual([{
+      path: "/docs/missing.md",
+      content: "created later",
+    }])
+    expect(tabsStore.isModified(tabId)).toBe(false)
   })
 })

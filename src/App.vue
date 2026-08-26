@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onMounted, ref } from "vue"
+import { computed, onMounted, onUnmounted, ref } from "vue"
 import { CircleAlert, X } from "@lucide/vue"
 
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
@@ -10,6 +10,7 @@ import {
   createApplicationCommands,
   type ActiveEditorCommands,
 } from "@/features/commands"
+import { createCliOpenController } from "@/features/cli"
 import { createFileCommands, useFilesStore } from "@/features/files"
 import {
   createNativeMenuController,
@@ -25,8 +26,10 @@ import { useKeyboardShortcuts } from "@/features/tabs/composables/useKeyboardSho
 import { useUnsavedChangesGuard } from "@/features/tabs/composables/useUnsavedChangesGuard"
 import { useTabsStore, type WorkspaceMode } from "@/features/tabs"
 import { TauriFileDialogRepository } from "@/infrastructure/tauri/tauri-dialog.repository"
+import { TauriCliRepository } from "@/infrastructure/tauri/tauri-cli.repository"
 import { TauriFileRepository } from "@/infrastructure/tauri/tauri-file.repository"
 import { TauriSessionRepository } from "@/infrastructure/tauri/tauri-session.repository"
+import { TauriShellCommandRepository } from "@/infrastructure/tauri/tauri-shell-command.repository"
 import { TauriWindowRepository } from "@/infrastructure/tauri/tauri-window.repository"
 
 const tabsStore = useTabsStore()
@@ -40,6 +43,12 @@ const fileCommands = createFileCommands({
   filesStore,
   files: new TauriFileRepository(),
   dialogs: new TauriFileDialogRepository(),
+})
+const cli = createCliOpenController({
+  repository: new TauriCliRepository(),
+  files: fileCommands,
+  tabsStore,
+  reportError: filesStore.setError,
 })
 const session = createSessionController(
   new TauriSessionRepository(),
@@ -77,6 +86,18 @@ const nativeMenu = createNativeMenuController({
   execute: appCommands.execute,
   openRecent: appCommands.openRecent,
   reportError: filesStore.setError,
+  manageShellCommands: async (install) => {
+    try {
+      await new TauriShellCommandRepository().manage(install)
+      return true
+    } catch (cause: unknown) {
+      const detail = typeof cause === "string"
+        ? cause
+        : cause instanceof Error ? cause.message : "Unknown error"
+      filesStore.setError(`Unable to update the Emditor shell commands: ${detail}`)
+      return false
+    }
+  },
 })
 
 useNativeMenu({
@@ -97,11 +118,15 @@ function selectMode(mode: WorkspaceMode): void {
 }
 
 onMounted(async () => {
-  await session.restore()
+  await cli.startListening()
+  const automaticWelcomeTabId = await session.restore()
   session.start()
   await closeGuard.start()
+  await cli.finishStartup(automaticWelcomeTabId)
   ready.value = true
 })
+
+onUnmounted(cli.stop)
 </script>
 
 <template>

@@ -7,8 +7,8 @@ import type {
 import type { OpenedMarkdownFile, SavedMarkdownFile } from "@/features/tabs"
 
 export class TauriFileRepository implements FileRepository {
-  read(path: string): Promise<OpenedMarkdownFile> {
-    return invoke<OpenedMarkdownFile>("read_markdown_file", { path })
+  read(path: string, allowMissing = false): Promise<OpenedMarkdownFile> {
+    return invoke<OpenedMarkdownFile>("read_markdown_file", { path, allowMissing })
   }
 
   resolve(path: string): Promise<ResolvedFilePath> {

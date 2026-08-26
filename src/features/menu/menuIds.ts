@@ -1,5 +1,7 @@
 export const NATIVE_MENU_IDS = {
   app: "app_menu",
+  appInstallShellCommands: "app_install_shell_commands",
+  appUninstallShellCommands: "app_uninstall_shell_commands",
   file: "file_menu",
   fileOpenRecent: "file_open_recent",
   edit: "edit_menu",

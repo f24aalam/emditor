@@ -63,7 +63,7 @@ function middleClick(event: MouseEvent): void {
       type="button"
       class="document-tab__close"
       :aria-label="`Close ${tab.title}`"
-      @click.stop="emit('close')"
+      @click.stop="$emit('close')"
     >
       <X class="size-3.5" />
     </button>

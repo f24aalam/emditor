@@ -1,12 +1,14 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
   "productName": "emditor",
+  "mainBinaryName": "emditor-app",
   "version": "0.1.0",
   "identifier": "com.emditor.app",
   "build": {
     "beforeDevCommand": "npm run dev",
     "devUrl": "http://localhost:1420",
     "beforeBuildCommand": "npm run build",
+    "beforeBundleCommand": "node scripts/build-launchers.mjs",
     "frontendDist": "../dist"
   },
   "app": {

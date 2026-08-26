@@ -8,7 +8,9 @@
     "build": "vue-tsc --noEmit && vite build",
     "test": "vitest run",
     "preview": "vite preview",
-    "tauri": "tauri"
+    "tauri": "tauri",
+    "build:deb": "./build-deb.sh",
+    "build:launchers": "node scripts/build-launchers.mjs"
   },
   "dependencies": {
     "@codemirror/commands": "^6.10.4",

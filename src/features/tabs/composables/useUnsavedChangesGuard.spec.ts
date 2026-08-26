@@ -17,6 +17,7 @@ describe("unsaved changes guard", () => {
     const files: FileCommands = {
       open: vi.fn(async () => false),
       openPath: vi.fn(async () => false),
+      openCliPath: vi.fn(async () => null),
       save: vi.fn(async () => saveResult),
       saveAs: vi.fn(async () => true),
     }
@@ -29,7 +30,7 @@ describe("unsaved changes guard", () => {
     const guard = useUnsavedChangesGuard(files, windowRepository, {
       flush: vi.fn(async () => undefined),
     })
-    return { tabsStore, tabId, files, guard, warning }
+    return { tabsStore, tabId, files, windowRepository, guard, warning }
   }
 
   it("opens the existing confirmation flow before closing a dirty tab", () => {
@@ -74,6 +75,17 @@ describe("unsaved changes guard", () => {
     expect(guard.dialogOpen.value).toBe(true)
     expect(guard.processing.value).toBe(false)
     expect(tabsStore.tabs).toHaveLength(1)
+    warning.mockRestore()
+  })
+
+  it("allows another close attempt when destroying the window fails", async () => {
+    const { tabsStore, tabId, windowRepository, guard, warning } = setup()
+    tabsStore.completeSave(tabId)
+    vi.mocked(windowRepository.destroy).mockRejectedValueOnce(new Error("destroy failed"))
+
+    await expect(guard.requestWindowClose()).rejects.toThrow("destroy failed")
+
+    expect(guard.processing.value).toBe(false)
     warning.mockRestore()
   })
 
