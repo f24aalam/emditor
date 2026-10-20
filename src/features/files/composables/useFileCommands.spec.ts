@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, it } from "vitest"
 import { createPinia, setActivePinia } from "pinia"
 
 import {
-  createFileCommands,
+  useFileCommands,
   useFilesStore,
   type FileDialogRepository,
   type FileRepository,
@@ -24,8 +24,9 @@ class FakeFiles implements FileRepository {
       })
     }
     if (this.shouldFail) return Promise.reject(new Error("not found"))
+    const title = path.split("/").slice(-1)[0] || "notes.md"
     return Promise.resolve({
-      title: "notes.md",
+      title,
       filePath: path,
       pathKey: path.toLowerCase(),
       content: "loaded",
@@ -33,7 +34,8 @@ class FakeFiles implements FileRepository {
   }
 
   resolve(path: string): Promise<ResolvedFilePath> {
-    return Promise.resolve({ title: "notes.md", filePath: path, pathKey: path.toLowerCase() })
+    const title = path.split("/").slice(-1)[0] || "notes.md"
+    return Promise.resolve({ title, filePath: path, pathKey: path.toLowerCase() })
   }
 
   write(path: string, content: string): Promise<SavedMarkdownFile> {
@@ -63,7 +65,7 @@ describe("file commands", () => {
     const filesStore = useFilesStore()
     const files = new FakeFiles()
     const dialogs = new FakeDialogs()
-    const commands = createFileCommands({ tabsStore, filesStore, files, dialogs })
+    const commands = useFileCommands({ tabsStore, filesStore, files, dialogs })
     return { tabsStore, filesStore, files, dialogs, commands }
   }
 
@@ -145,5 +147,16 @@ describe("file commands", () => {
       content: "created later",
     }])
     expect(tabsStore.isModified(tabId)).toBe(false)
+  })
+
+  it("opens multiple CLI files in a single batch and activates the last tab", async () => {
+    const { tabsStore, filesStore, commands } = setup()
+    const result = await commands.openCliPaths!(["/docs/one.md", "/docs/two.md", "/docs/three.md"])
+
+    expect(result.failed).toBe(false)
+    expect(result.ids).toHaveLength(3)
+    expect(tabsStore.tabs.map((tab) => tab.title)).toEqual(["one.md", "two.md", "three.md"])
+    expect(tabsStore.activeTab?.title).toBe("three.md")
+    expect(filesStore.recentFiles.map((file) => file.title)).toEqual(["three.md", "two.md", "one.md"])
   })
 })

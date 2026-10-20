@@ -1,19 +1,21 @@
 <script setup lang="ts">
 import { computed, watch } from "vue"
 
-import MarkdownWorkspace from "@/components/editor/MarkdownWorkspace.vue"
-import type { ActiveEditorCommands } from "@/features/commands"
+import { MarkdownWorkspace, type EditorCommands } from "@/features/editor"
 import { useWorkspaceCache } from "@/features/tabs/composables/useWorkspaceCache"
-import { useTabsStore } from "@/features/tabs"
+import type { DocumentTab } from "@/features/tabs/model/tab.types"
+import { useTabsStore } from "@/features/tabs/stores/tabs.store"
 
 const tabsStore = useTabsStore()
 const emit = defineEmits<{ historyStateChange: [] }>()
 const cache = useWorkspaceCache()
-const workspaceRefs = new Map<string, ActiveEditorCommands>()
+const workspaceRefs = new Map<string, EditorCommands>()
 
 const cachedTabs = computed(() => {
-  const cached = new Set(cache.cachedTabIds.value)
-  return tabsStore.tabs.filter((tab) => cached.has(tab.id))
+  const byId = new Map(tabsStore.tabs.map((tab) => [tab.id, tab]))
+  return cache.cachedTabIds.value
+    .map((id) => byId.get(id))
+    .filter((tab): tab is DocumentTab => tab !== undefined)
 })
 
 function setWorkspaceRef(tabId: string, instance: unknown): void {
@@ -21,20 +23,22 @@ function setWorkspaceRef(tabId: string, instance: unknown): void {
     workspaceRefs.delete(tabId)
     return
   }
-  const commands = instance as ActiveEditorCommands
+  const commands = instance as EditorCommands
   if (
     typeof commands.undo === "function"
     && typeof commands.redo === "function"
     && typeof commands.canUndo === "function"
     && typeof commands.canRedo === "function"
   ) {
-    // Function refs may run again during a parent update. History notifications
-    // must come from the editor, or emitting here creates a render loop.
+    const previous = workspaceRefs.get(tabId)
     workspaceRefs.set(tabId, commands)
+    if (previous !== commands && tabId === tabsStore.activeTabId) {
+      emit("historyStateChange")
+    }
   }
 }
 
-function activeWorkspace(): ActiveEditorCommands | null {
+function activeWorkspace(): EditorCommands | null {
   const tabId = tabsStore.activeTabId
   return tabId ? workspaceRefs.get(tabId) ?? null : null
 }
@@ -59,13 +63,19 @@ watch(
   () => tabsStore.activeTabId,
   (tabId) => {
     if (tabId) cache.touch(tabId)
+    emit("historyStateChange")
   },
   { immediate: true },
 )
 
+const tabIdsSignature = computed(() =>
+  tabsStore.tabs.map((tab) => tab.id).join("\u0000"),
+)
+
 watch(
-  () => tabsStore.tabs.map((tab) => tab.id),
-  (validTabIds) => {
+  tabIdsSignature,
+  () => {
+    const validTabIds = tabsStore.tabs.map((tab) => tab.id)
     cache.prune(validTabIds)
     const valid = new Set(validTabIds)
     for (const tabId of workspaceRefs.keys()) {
@@ -92,7 +102,11 @@ defineExpose({ undo, redo, canUndo, canRedo })
     >
       <MarkdownWorkspace
         :ref="(instance) => setWorkspaceRef(tab.id, instance)"
-        :tab-id="tab.id"
+        :mode="tab.mode"
+        :model-value="tab.content"
+        :editor-state="tab.editorState"
+        @update:model-value="tabsStore.updateContent(tab.id, $event)"
+        @update:editor-state="(area, state) => tabsStore.updateEditorState(tab.id, area, state)"
         @history-state-change="emit('historyStateChange')"
       />
     </section>

@@ -1,19 +1,20 @@
-mod cli_requests;
 mod commands;
 mod error;
 mod models;
 mod services;
-mod shell_commands;
 
-use cli_requests::{complete_cli_wait, drain_open_requests, OpenRequestQueue, WaitRegistry};
-use commands::file_commands::{read_markdown_file, resolve_file_path, write_markdown_file};
-use shell_commands::manage_shell_commands;
+use commands::{
+    cli_commands::{complete_cli_wait, drain_open_requests},
+    file_commands::{read_markdown_file, resolve_file_path, write_markdown_file},
+    shell_commands::manage_shell_commands,
+};
+use services::cli_service::{self, OpenRequestQueue, WaitRegistry};
 use std::path::PathBuf;
 use tauri::Manager;
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
-    let startup_request = cli_requests::request_from_args(
+    let startup_request = cli_service::request_from_args(
         &std::env::args().collect::<Vec<_>>(),
         &std::env::current_dir().unwrap_or_else(|_| PathBuf::from(".")),
     );
@@ -21,9 +22,9 @@ pub fn run() {
     let app = tauri::Builder::default()
         .plugin(tauri_plugin_single_instance::init(|app, args, cwd| {
             if let Some(request) =
-                cli_requests::request_from_args(&args, std::path::Path::new(&cwd))
+                cli_service::request_from_args(&args, std::path::Path::new(&cwd))
             {
-                cli_requests::enqueue(app, request, true);
+                cli_service::enqueue(app, request, true);
             }
             if let Some(window) = app.get_webview_window("main") {
                 let _ = window.show();
@@ -37,8 +38,14 @@ pub fn run() {
         .plugin(tauri_plugin_store::Builder::default().build())
         .plugin(tauri_plugin_opener::init())
         .setup(move |app| {
+            #[cfg(debug_assertions)]
+            if std::env::var_os("EMDITOR_OPEN_DEVTOOLS").is_some() {
+                if let Some(window) = app.get_webview_window("main") {
+                    window.open_devtools();
+                }
+            }
             if let Some(request) = startup_request {
-                cli_requests::enqueue(app.handle(), request, false);
+                cli_service::enqueue(app.handle(), request, false);
             }
             Ok(())
         })

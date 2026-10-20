@@ -17,6 +17,25 @@ export const useFilesStore = defineStore("files", () => {
     ].slice(0, MAX_RECENT_FILES)
   }
 
+  function addRecentFiles(files: readonly RecentFile[]): void {
+    if (files.length === 0) return
+    const seen = new Set<string>()
+    const merged: RecentFile[] = []
+
+    for (let index = files.length - 1; index >= 0; index -= 1) {
+      const file = files[index]
+      if (!file || seen.has(file.pathKey)) continue
+      seen.add(file.pathKey)
+      merged.push(file)
+    }
+    for (const recent of recentFiles.value) {
+      if (seen.has(recent.pathKey)) continue
+      seen.add(recent.pathKey)
+      merged.push(recent)
+    }
+    recentFiles.value = merged.slice(0, MAX_RECENT_FILES)
+  }
+
   function removeRecentFile(pathKey: string): void {
     recentFiles.value = recentFiles.value.filter((file) => file.pathKey !== pathKey)
   }
@@ -45,6 +64,7 @@ export const useFilesStore = defineStore("files", () => {
     errorMessage,
     busyTabIds,
     addRecentFile,
+    addRecentFiles,
     removeRecentFile,
     replaceRecentFiles,
     setError,

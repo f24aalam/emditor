@@ -8,7 +8,7 @@ export class TauriSessionRepository implements SessionRepository {
   private storePromise: Promise<Store> | null = null
 
   private store(): Promise<Store> {
-    this.storePromise ??= load("emditor-state.json", { autoSave: 200 })
+    this.storePromise ??= load("emditor-state.json", { autoSave: false })
     return this.storePromise
   }
 

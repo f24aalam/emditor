@@ -4,7 +4,8 @@ import type {
   RecentFile,
 } from "@/features/files/model/file.types"
 import { useFilesStore } from "@/features/files/stores/files.store"
-import { useTabsStore } from "@/features/tabs"
+import { useTabsStore, type OpenedMarkdownFile } from "@/features/tabs"
+import { formatErrorMessage } from "@/shared/utils/error"
 
 type TabsStore = ReturnType<typeof useTabsStore>
 type FilesStore = ReturnType<typeof useFilesStore>
@@ -20,14 +21,13 @@ export interface FileCommands {
   open: () => Promise<boolean>
   openPath: (path: string, recent?: RecentFile) => Promise<boolean>
   openCliPath: (path: string) => Promise<{ id: string; created: boolean } | null>
+  openCliPaths?: (paths: readonly string[]) => Promise<{ ids: string[]; failed: boolean }>
   save: (tabId?: string) => Promise<boolean>
   saveAs: (tabId?: string) => Promise<boolean>
 }
 
 function errorText(cause: unknown, action: string): string {
-  if (typeof cause === "string" && cause.trim()) return `${action}: ${cause}`
-  if (cause instanceof Error && cause.message.trim()) return `${action}: ${cause.message}`
-  return `${action}. Please try again.`
+  return formatErrorMessage(cause, action, ". Please try again.")
 }
 
 function activeOrRequestedTab(store: TabsStore, tabId?: string) {
@@ -36,28 +36,37 @@ function activeOrRequestedTab(store: TabsStore, tabId?: string) {
     : store.activeTab
 }
 
-export function createFileCommands(
+export function useFileCommands(
   dependencies: FileCommandDependencies,
 ): FileCommands {
   const { tabsStore, filesStore, files, dialogs } = dependencies
+
+  async function readForOpen(
+    path: string,
+    recent?: RecentFile,
+    allowMissing = false,
+  ): Promise<OpenedMarkdownFile | null> {
+    const recentEntry = recent
+      ?? filesStore.recentFiles.find((file) => file.filePath === path)
+    try {
+      return await files.read(path, allowMissing)
+    } catch (cause: unknown) {
+      if (recentEntry) filesStore.removeRecentFile(recentEntry.pathKey)
+      filesStore.setError(errorText(cause, `Unable to open “${recentEntry?.title ?? path}”`))
+      return null
+    }
+  }
 
   async function openPathResult(
     path: string,
     recent?: RecentFile,
     allowMissing = false,
   ): Promise<{ id: string; created: boolean } | null> {
-    const recentEntry = recent
-      ?? filesStore.recentFiles.find((file) => file.filePath === path)
-    try {
-      const file = await files.read(path, allowMissing)
-      const result = tabsStore.openFile(file)
-      filesStore.addRecentFile(file)
-      return result
-    } catch (cause: unknown) {
-      if (recentEntry) filesStore.removeRecentFile(recentEntry.pathKey)
-      filesStore.setError(errorText(cause, `Unable to open “${recentEntry?.title ?? path}”`))
-      return null
-    }
+    const file = await readForOpen(path, recent, allowMissing)
+    if (!file) return null
+    const result = tabsStore.openFile(file)
+    filesStore.addRecentFile(file)
+    return result
   }
 
   async function openPath(path: string, recent?: RecentFile): Promise<boolean> {
@@ -66,6 +75,25 @@ export function createFileCommands(
 
   function openCliPath(path: string): Promise<{ id: string; created: boolean } | null> {
     return openPathResult(path, undefined, true)
+  }
+
+  async function openCliPaths(
+    paths: readonly string[],
+  ): Promise<{ ids: string[]; failed: boolean }> {
+    if (paths.length === 0) return { ids: [], failed: false }
+    const loaded = await Promise.all(
+      paths.map((path) => readForOpen(path, undefined, true)),
+    )
+    const validFiles = loaded.filter(
+      (file): file is OpenedMarkdownFile => file !== null,
+    )
+    const failed = validFiles.length !== paths.length
+    const opened = tabsStore.openFiles(validFiles)
+    filesStore.addRecentFiles(validFiles)
+    return {
+      ids: opened.map((entry) => entry.id),
+      failed,
+    }
   }
 
   async function open(): Promise<boolean> {
@@ -123,5 +151,5 @@ export function createFileCommands(
     return tab.filePath ? writeTo(tab.id, tab.filePath) : saveAs(tab.id)
   }
 
-  return { open, openPath, openCliPath, save, saveAs }
+  return { open, openPath, openCliPath, openCliPaths, save, saveAs }
 }

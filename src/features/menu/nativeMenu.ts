@@ -10,6 +10,7 @@ import {
 import { APPLICATION_COMMAND_IDS } from "@/features/commands"
 import { NATIVE_MENU_IDS, recentFileMenuId } from "@/features/menu/menuIds"
 import type { NativeMenuState } from "@/features/menu/menuState"
+import { formatErrorMessage } from "@/shared/utils/error"
 
 export type DesktopPlatform = "macos" | "windows" | "linux"
 
@@ -44,8 +45,7 @@ function currentPlatform(): DesktopPlatform {
 }
 
 function errorMessage(cause: unknown, action: string): string {
-  if (cause instanceof Error && cause.message.trim()) return `${action}: ${cause.message}`
-  return action
+  return formatErrorMessage(cause, action)
 }
 
 export function createNativeMenuController(

@@ -1,2 +1,3 @@
-export { createCliOpenController } from "./composables/createCliOpenController"
-export type { CliRepository, OpenRequest } from "./model/cli.types"
+export { useCliOpenController } from "./composables/useCliOpenController"
+export type { CliRepository } from "./model/cli.repository"
+export type { OpenRequest } from "./model/cli.types"

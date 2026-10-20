@@ -1,8 +1,12 @@
+[workspace]
+members = [".", "launcher", "cli-protocol"]
+resolver = "2"
+
 [package]
 name = "emditor"
 version = "0.1.0"
-description = "A Tauri App"
-authors = ["you"]
+description = "A modern, tabbed desktop Markdown editor"
+authors = ["Emditor Contributors"]
 edition = "2021"
 
 [[bin]]

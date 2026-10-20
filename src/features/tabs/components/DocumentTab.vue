@@ -1,10 +1,10 @@
 <script setup lang="ts">
 import { X } from "@lucide/vue"
 
-import type { DocumentTab } from "@/features/tabs"
-
 interface Props {
-  tab: DocumentTab
+  id: string
+  title: string
+  filePath: string | null
   active: boolean
   modified: boolean
   dragging: boolean
@@ -44,25 +44,25 @@ function middleClick(event: MouseEvent): void {
     @dragend="emit('dragend')"
   >
     <button
-      :id="`tab-${tab.id}`"
+      :id="`tab-${id}`"
       type="button"
       role="tab"
       class="document-tab__target"
       :aria-selected="active"
-      :aria-controls="`panel-${tab.id}`"
-      :aria-label="`${tab.title}${modified ? ', unsaved changes' : ''}`"
+      :aria-controls="`panel-${id}`"
+      :aria-label="`${title}${modified ? ', unsaved changes' : ''}`"
       :tabindex="active ? 0 : -1"
-      :title="tab.filePath ?? tab.title"
+      :title="filePath ?? title"
       @click="emit('activate')"
       @keydown="emit('navigate', $event)"
     >
       <span v-if="modified" class="document-tab__dirty" aria-hidden="true" />
-      <span class="document-tab__title">{{ tab.title }}</span>
+      <span class="document-tab__title">{{ title }}</span>
     </button>
     <button
       type="button"
       class="document-tab__close"
-      :aria-label="`Close ${tab.title}`"
+      :aria-label="`Close ${title}`"
       @click.stop="$emit('close')"
     >
       <X class="size-3.5" />

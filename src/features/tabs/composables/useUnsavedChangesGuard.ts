@@ -2,7 +2,7 @@ import { computed, nextTick, onUnmounted, ref } from "vue"
 
 import type { FileCommands } from "@/features/files"
 import type { WindowRepository } from "@/features/tabs/model/window.repository"
-import { useTabsStore } from "@/features/tabs"
+import { useTabsStore } from "@/features/tabs/stores/tabs.store"
 
 interface SessionFlusher {
   flush: () => Promise<void>
@@ -40,6 +40,9 @@ export function useUnsavedChangesGuard(
   }
 
   function requestClose(tabId: string): void {
+    if (processing.value || pendingWindowClose.value || pendingTabId.value !== null) {
+      return
+    }
     if (!tabsStore.isModified(tabId)) {
       tabsStore.closeTab(tabId)
       return
@@ -49,6 +52,7 @@ export function useUnsavedChangesGuard(
 
   async function requestWindowClose(): Promise<void> {
     if (processing.value || pendingWindowClose.value) return
+    pendingTabId.value = null
     if (!tabsStore.hasModifiedTabs) {
       processing.value = true
       try {
@@ -72,7 +76,11 @@ export function useUnsavedChangesGuard(
       await nextTick()
 
       if (pendingWindowClose.value) {
-        for (const tab of dirtyTabs.value) {
+        for (const tab of [...dirtyTabs.value]) {
+          if (!tab.filePath) {
+            tabsStore.activateTab(tab.id)
+            await nextTick()
+          }
           if (!await fileCommands.save(tab.id)) return
         }
         await session.flush()
@@ -94,7 +102,7 @@ export function useUnsavedChangesGuard(
     processing.value = true
     try {
       if (pendingWindowClose.value) {
-        for (const tab of dirtyTabs.value) tabsStore.discardChanges(tab.id)
+        for (const tab of [...dirtyTabs.value]) tabsStore.discardChanges(tab.id)
         await session.flush()
         await windowRepository.destroy()
         return

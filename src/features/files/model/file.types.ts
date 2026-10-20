@@ -1,17 +1,9 @@
-import type { OpenedMarkdownFile, SavedMarkdownFile } from "@/features/tabs"
+import type { SavedMarkdownFile } from "@/features/tabs"
+
+export type { FileDialogRepository } from "@/features/files/model/dialog.repository"
+export type { FileRepository } from "@/features/files/model/file.repository"
 
 export interface ResolvedFilePath extends SavedMarkdownFile {}
-
-export interface FileRepository {
-  read(path: string, allowMissing?: boolean): Promise<OpenedMarkdownFile>
-  resolve(path: string): Promise<ResolvedFilePath>
-  write(path: string, content: string): Promise<SavedMarkdownFile>
-}
-
-export interface FileDialogRepository {
-  chooseMarkdownFile(): Promise<string | null>
-  chooseMarkdownSavePath(suggestedName: string): Promise<string | null>
-}
 
 export interface RecentFile {
   title: string

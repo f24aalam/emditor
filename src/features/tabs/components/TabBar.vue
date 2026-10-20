@@ -1,17 +1,25 @@
 <script setup lang="ts">
 import { computed, nextTick, onUnmounted, watch } from "vue"
+import { ChevronDown } from "@lucide/vue"
 
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
 import DocumentTab from "@/features/tabs/components/DocumentTab.vue"
 import NewTabButton from "@/features/tabs/components/NewTabButton.vue"
 import { useDeferredTabActivation } from "@/features/tabs/composables/useDeferredTabActivation"
 import { useTabDrag } from "@/features/tabs/composables/useTabDrag"
-import { useTabsStore } from "@/features/tabs"
+import { useTabsStore } from "@/features/tabs/stores/tabs.store"
 
 const emit = defineEmits<{ close: [tabId: string]; new: [] }>()
 const tabsStore = useTabsStore()
 const { draggedTabId, start, over, end } = useTabDrag()
+const tabIds = computed(() => tabsStore.tabs.map((tab) => tab.id))
 const deferredActivation = useDeferredTabActivation({
-  getTabIds: () => tabsStore.tabs.map((tab) => tab.id),
+  getTabIds: () => tabIds.value,
   getActiveTabId: () => tabsStore.activeTabId,
   activate: tabsStore.activateTab,
 })
@@ -76,13 +84,16 @@ function navigate(event: KeyboardEvent): void {
     target = tabsStore.activeTabId
   } else if (event.key === "Home") {
     target = tabsStore.tabs[0]?.id ?? null
+    if (target) tabsStore.activateTab(target)
   } else if (event.key === "End") {
     target = tabsStore.tabs[tabsStore.tabs.length - 1]?.id ?? null
+    if (target) tabsStore.activateTab(target)
   } else return
 
   event.preventDefault()
-  if (target) tabsStore.activateTab(target)
-  void nextTick(() => document.getElementById(`tab-${target}`)?.focus())
+  void nextTick(() => {
+    if (target) document.getElementById(`tab-${target}`)?.focus()
+  })
 }
 
 watch(
@@ -103,7 +114,7 @@ watch(
 )
 
 watch(
-  () => tabsStore.tabs.map((tab) => tab.id).join("\u0000"),
+  () => tabIds.value.join("\u0000"),
   () => deferredActivation.cancel(),
 )
 
@@ -116,8 +127,10 @@ onUnmounted(deferredActivation.dispose)
       <div class="tab-bar__tabs" role="tablist" aria-label="Open documents">
         <DocumentTab
           v-for="tab in tabsStore.tabs"
+          :id="tab.id"
           :key="tab.id"
-          :tab="tab"
+          :title="tab.title"
+          :file-path="tab.filePath"
           :active="tab.id === tabsStore.activeTabId"
           :modified="tabsStore.isModified(tab.id)"
           :dragging="tab.id === draggedTabId"
@@ -132,6 +145,35 @@ onUnmounted(deferredActivation.dispose)
       </div>
       <NewTabButton @click="createTab" />
     </div>
+    <DropdownMenu v-if="tabsStore.tabs.length > 1">
+      <DropdownMenuTrigger as-child>
+        <button
+          type="button"
+          class="new-tab-button"
+          aria-label="List all open tabs"
+          title="All open tabs"
+        >
+          <ChevronDown class="size-4" />
+        </button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="end" class="max-h-80 w-56 overflow-y-auto">
+        <DropdownMenuItem
+          v-for="tab in tabsStore.tabs"
+          :key="tab.id"
+          class="flex items-center justify-between gap-2"
+          @select="activateTab(tab.id)"
+        >
+          <span class="truncate" :class="{ 'font-semibold': tab.id === tabsStore.activeTabId }">
+            {{ tab.title }}
+          </span>
+          <span
+            v-if="tabsStore.isModified(tab.id)"
+            class="document-tab__dirty"
+            aria-label="Unsaved changes"
+          />
+        </DropdownMenuItem>
+      </DropdownMenuContent>
+    </DropdownMenu>
     <div class="tab-bar__actions">
       <slot name="actions" />
     </div>

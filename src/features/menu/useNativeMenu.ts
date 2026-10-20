@@ -2,6 +2,7 @@ import { onUnmounted, watch, type ComputedRef, type Ref } from "vue"
 
 import type { NativeMenuController } from "@/features/menu/nativeMenu"
 import type { NativeMenuState } from "@/features/menu/menuState"
+import { formatErrorMessage } from "@/shared/utils/error"
 
 interface UseNativeMenuOptions {
   ready: Ref<boolean>
@@ -25,10 +26,7 @@ export function useNativeMenu(options: UseNativeMenuOptions): void {
           else await options.controller.install(state)
         })
         .catch((cause: unknown) => {
-          const detail = cause instanceof Error && cause.message.trim()
-            ? `: ${cause.message}`
-            : ""
-          options.reportError(`Unable to synchronize the native menu${detail}`)
+          options.reportError(formatErrorMessage(cause, "Unable to synchronize the native menu"))
         })
     },
     { deep: true, immediate: true },

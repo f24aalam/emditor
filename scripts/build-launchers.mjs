@@ -1,10 +1,11 @@
-import { chmodSync, copyFileSync, mkdirSync } from "node:fs"
+import { chmodSync, copyFileSync, existsSync, mkdirSync } from "node:fs"
 import { dirname, join, resolve } from "node:path"
 import { fileURLToPath } from "node:url"
 import { spawnSync } from "node:child_process"
 
 const projectRoot = resolve(dirname(fileURLToPath(import.meta.url)), "..")
-const launcherRoot = join(projectRoot, "src-tauri", "launcher")
+const tauriRoot = join(projectRoot, "src-tauri")
+const launcherRoot = join(tauriRoot, "launcher")
 const args = ["build", "--release"]
 const target = process.env.CARGO_BUILD_TARGET
 const platform = process.env.TAURI_ENV_PLATFORM
@@ -16,11 +17,17 @@ if (build.status !== 0) process.exit(build.status ?? 1)
 
 const windows = platform === "windows" || platform === "win32"
 const executableName = windows ? "emditor.exe" : "emditor"
-const outputDirectory = target
+const workspaceOutputDirectory = target
+  ? join(tauriRoot, "target", target, "release")
+  : join(tauriRoot, "target", "release")
+const packageOutputDirectory = target
   ? join(launcherRoot, "target", target, "release")
   : join(launcherRoot, "target", "release")
-const source = join(outputDirectory, executableName)
-const staging = join(projectRoot, "src-tauri", "binaries")
+const workspaceSource = join(workspaceOutputDirectory, executableName)
+const source = existsSync(workspaceSource)
+  ? workspaceSource
+  : join(packageOutputDirectory, executableName)
+const staging = join(tauriRoot, "binaries")
 mkdirSync(staging, { recursive: true })
 
 for (const name of windows

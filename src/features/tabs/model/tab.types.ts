@@ -1,26 +1,16 @@
-export type WorkspaceMode = "editor" | "source" | "split"
+import type {
+  DocumentEditorState,
+  WorkspaceMode,
+} from "@/features/editor"
 
-export interface EditorSelectionState {
-  anchor: number
-  head: number
-}
-
-export interface EditorViewportState {
-  selection: EditorSelectionState
-  scrollTop: number
-  scrollLeft: number
-}
-
-export interface PreviewViewportState {
-  scrollTop: number
-  scrollLeft: number
-}
-
-export interface DocumentEditorState {
-  source: EditorViewportState
-  editor: EditorViewportState
-  preview: PreviewViewportState
-}
+export {
+  createDefaultEditorState,
+  type DocumentEditorState,
+  type EditorSelectionState,
+  type EditorViewportState,
+  type PreviewViewportState,
+  type WorkspaceMode,
+} from "@/features/editor"
 
 export interface DocumentTab {
   id: string
@@ -44,18 +34,4 @@ export interface SavedMarkdownFile {
   title: string
   filePath: string
   pathKey: string
-}
-
-export function createDefaultEditorState(): DocumentEditorState {
-  const viewport = (): EditorViewportState => ({
-    selection: { anchor: 0, head: 0 },
-    scrollTop: 0,
-    scrollLeft: 0,
-  })
-
-  return {
-    source: viewport(),
-    editor: viewport(),
-    preview: { scrollTop: 0, scrollLeft: 0 },
-  }
 }

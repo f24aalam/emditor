@@ -15,12 +15,18 @@ interface Props {
   processing: boolean
 }
 
-defineProps<Props>()
-defineEmits<{ save: []; discard: []; cancel: [] }>()
+const props = defineProps<Props>()
+const emit = defineEmits<{ save: []; discard: []; cancel: [] }>()
+
+function onOpenChange(nextOpen: boolean): void {
+  if (!nextOpen && !props.processing) {
+    emit("cancel")
+  }
+}
 </script>
 
 <template>
-  <AlertDialog :open="open">
+  <AlertDialog :open="open" @update:open="onOpenChange">
     <AlertDialogContent>
       <AlertDialogHeader>
         <AlertDialogTitle>{{ title }}</AlertDialogTitle>
@@ -33,7 +39,7 @@ defineEmits<{ save: []; discard: []; cancel: [] }>()
           type="button"
           variant="outline"
           :disabled="processing"
-          @click="$emit('cancel')"
+          @click="emit('cancel')"
         >
           Cancel
         </Button>
@@ -41,14 +47,14 @@ defineEmits<{ save: []; discard: []; cancel: [] }>()
           type="button"
           variant="destructive"
           :disabled="processing"
-          @click="$emit('discard')"
+          @click="emit('discard')"
         >
           Don’t Save
         </Button>
         <Button
           type="button"
           :disabled="processing"
-          @click="$emit('save')"
+          @click="emit('save')"
         >
           Save
         </Button>

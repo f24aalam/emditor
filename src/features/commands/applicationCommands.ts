@@ -1,6 +1,8 @@
+import type { EditorCommands } from "@/features/editor"
 import type { FileCommands } from "@/features/files"
 import type { WorkspaceMode } from "@/features/tabs"
 import { useTabsStore } from "@/features/tabs"
+import { formatErrorMessage } from "@/shared/utils/error"
 
 export const APPLICATION_COMMAND_IDS = {
   newTab: "file_new_tab",
@@ -24,12 +26,7 @@ export const APPLICATION_COMMAND_IDS = {
 export type ApplicationCommandId =
   (typeof APPLICATION_COMMAND_IDS)[keyof typeof APPLICATION_COMMAND_IDS]
 
-export interface ActiveEditorCommands {
-  undo: () => boolean
-  redo: () => boolean
-  canUndo: () => boolean
-  canRedo: () => boolean
-}
+export type ActiveEditorCommands = EditorCommands
 
 interface CloseCommands {
   closeTab: (tabId: string) => void
@@ -137,10 +134,7 @@ export function createApplicationCommands(
     try {
       return await run(id)
     } catch (cause: unknown) {
-      const detail = cause instanceof Error && cause.message.trim()
-        ? `: ${cause.message}`
-        : ""
-      reportError(`Unable to run the requested command${detail}`)
+      reportError(formatErrorMessage(cause, "Unable to run the requested command"))
       return false
     }
   }

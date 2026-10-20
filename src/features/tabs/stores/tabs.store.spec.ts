@@ -99,4 +99,27 @@ describe("tabs store", () => {
     })
     expect(store.isModified(id)).toBe(false)
   })
+
+  it("batch opens multiple files and activates only the final tab", () => {
+    const store = useTabsStore()
+    const results = store.openFiles([
+      {
+        title: "one.md",
+        filePath: "/docs/one.md",
+        pathKey: "/docs/one.md",
+        content: "1",
+      },
+      {
+        title: "two.md",
+        filePath: "/docs/two.md",
+        pathKey: "/docs/two.md",
+        content: "2",
+      },
+    ])
+
+    expect(results).toHaveLength(2)
+    expect(store.tabs).toHaveLength(2)
+    expect(store.activeTab?.title).toBe("two.md")
+    expect(store.hasModifiedTabs).toBe(false)
+  })
 })
