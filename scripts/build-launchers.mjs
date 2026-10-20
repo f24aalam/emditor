@@ -7,12 +7,26 @@ const projectRoot = resolve(dirname(fileURLToPath(import.meta.url)), "..")
 const tauriRoot = join(projectRoot, "src-tauri")
 const launcherRoot = join(tauriRoot, "launcher")
 const args = ["build", "--release"]
-const target = process.env.CARGO_BUILD_TARGET || process.env.TAURI_ENV_TARGET_TRIPLE || undefined
+const rawTarget = (
+  process.env.CARGO_BUILD_TARGET
+  || process.env.TAURI_ENV_TARGET_TRIPLE
+  || ""
+).trim()
+const target = rawTarget.length > 0 ? rawTarget : undefined
 const platform = process.env.TAURI_ENV_PLATFORM
   ?? (process.platform === "darwin" ? "macos" : process.platform)
 if (target) args.push("--target", target)
 
-const build = spawnSync("cargo", args, { cwd: launcherRoot, stdio: "inherit" })
+const childEnv = { ...process.env }
+if (!target) {
+  delete childEnv.CARGO_BUILD_TARGET
+}
+
+const build = spawnSync("cargo", args, {
+  cwd: launcherRoot,
+  env: childEnv,
+  stdio: "inherit",
+})
 if (build.status !== 0) process.exit(build.status ?? 1)
 
 const windows = platform === "windows" || platform === "win32"

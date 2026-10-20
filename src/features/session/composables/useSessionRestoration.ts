@@ -7,6 +7,7 @@ import type {
 } from "@/features/session/model/session.types"
 import { parseSessionSnapshot } from "@/features/session/model/session.validation"
 import { STARTER_MARKDOWN, useTabsStore, type DocumentTab } from "@/features/tabs"
+import type { useThemeStore } from "@/features/theme"
 
 const SAVE_DEBOUNCE_MS = 300
 
@@ -22,6 +23,7 @@ export function useSessionRestoration(
   tabsStore: ReturnType<typeof useTabsStore>,
   filesStore: ReturnType<typeof useFilesStore>,
   files?: Pick<FileRepository, "read">,
+  themeStore?: ReturnType<typeof useThemeStore>,
 ): SessionController {
   let unsubscribe: (() => void) | null = null
   let timer: ReturnType<typeof setTimeout> | null = null
@@ -54,6 +56,7 @@ export function useSessionRestoration(
       }),
       activeTabId: tabsStore.activeTabId,
       recentFiles: filesStore.recentFiles.map((file) => ({ ...file })),
+      ...(themeStore ? { theme: { ...themeStore.preferences } } : {}),
     }
   }
 
@@ -154,6 +157,9 @@ export function useSessionRestoration(
         return tabsStore.createTab(STARTER_MARKDOWN)
       }
 
+      if (restored.theme && themeStore) {
+        themeStore.setPreferences(restored.theme)
+      }
       const hydrated = (await Promise.all(restored.tabs.map(hydrateTab))).filter(
         (tab): tab is DocumentTab => tab !== null,
       )
@@ -174,9 +180,11 @@ export function useSessionRestoration(
     if (unsubscribe) return
     const stopTabs = tabsStore.$subscribe(schedule, { detached: true })
     const stopFiles = filesStore.$subscribe(schedule, { detached: true })
+    const stopTheme = themeStore?.$subscribe(schedule, { detached: true })
     unsubscribe = () => {
       stopTabs()
       stopFiles()
+      stopTheme?.()
     }
   }
 

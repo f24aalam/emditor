@@ -12,10 +12,12 @@ import {
   TabBar,
   UnsavedChangesDialog,
 } from "@/features/tabs"
+import { ThemeDialog } from "@/features/theme"
 
 const {
   tabsStore,
   filesStore,
+  themeStore,
   workspace,
   ready,
   closeGuard,
@@ -73,6 +75,16 @@ const {
       @save="closeGuard.saveAndContinue"
       @discard="closeGuard.discardAndContinue"
       @cancel="closeGuard.cancel"
+    />
+
+    <ThemeDialog
+      v-if="themeStore.dialogOpen"
+      :open="themeStore.dialogOpen"
+      :mode="themeStore.mode"
+      :preset="themeStore.preset"
+      @update:open="themeStore.setDialogOpen"
+      @select-mode="themeStore.setMode"
+      @select-preset="themeStore.setPreset"
     />
   </div>
 </template>

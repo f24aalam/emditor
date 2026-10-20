@@ -5,6 +5,7 @@ import type {
   SessionSnapshot,
   SessionTabSnapshot,
 } from "@/features/session/model/session.types"
+import { parseThemePreferences } from "@/features/theme"
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value)
@@ -127,10 +128,13 @@ export function parseSessionSnapshot(value: unknown): SessionSnapshot | null {
     recentFiles.push(parsed)
   }
 
+  const theme = parseThemePreferences(value.theme) ?? undefined
+
   return {
     version: 1,
     tabs,
     activeTabId: value.activeTabId,
     recentFiles,
+    ...(theme ? { theme } : {}),
   }
 }

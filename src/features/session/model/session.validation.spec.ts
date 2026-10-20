@@ -107,4 +107,25 @@ describe("session validation", () => {
   it("rejects unknown schema versions", () => {
     expect(parseSessionSnapshot({ version: 2, tabs: [] })).toBeNull()
   })
+
+  it("parses valid theme preferences and ignores invalid theme fields without rejecting the session", () => {
+    const withValidTheme = parseSessionSnapshot({
+      version: 1,
+      activeTabId: null,
+      recentFiles: [],
+      tabs: [],
+      theme: { mode: "dark", preset: "forest" },
+    })
+    expect(withValidTheme?.theme).toEqual({ mode: "dark", preset: "forest" })
+
+    const withInvalidTheme = parseSessionSnapshot({
+      version: 1,
+      activeTabId: null,
+      recentFiles: [],
+      tabs: [],
+      theme: { mode: "neon", preset: "unknown" },
+    })
+    expect(withInvalidTheme).not.toBeNull()
+    expect(withInvalidTheme?.theme).toBeUndefined()
+  })
 })

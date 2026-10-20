@@ -172,6 +172,13 @@ describe("native menu", () => {
     if (typeof action === "function") action(APPLICATION_COMMAND_IDS.newTab)
     await Promise.resolve()
     expect(execute).toHaveBeenCalledWith(APPLICATION_COMMAND_IDS.newTab)
+
+    const themeItem = tauriMenu.created.find((item) => item.id === APPLICATION_COMMAND_IDS.openTheme)
+    expect(themeItem?.options.text).toBe("Theme…")
+    const themeAction = themeItem?.options.action
+    if (typeof themeAction === "function") themeAction(APPLICATION_COMMAND_IDS.openTheme)
+    await Promise.resolve()
+    expect(execute).toHaveBeenCalledWith(APPLICATION_COMMAND_IDS.openTheme)
   })
 
   it("synchronizes enabled and checked state", async () => {

@@ -18,6 +18,7 @@ import {
   useUnsavedChangesGuard,
   type WorkspaceMode,
 } from "@/features/tabs"
+import { useThemeController, useThemeStore } from "@/features/theme"
 import { TauriCliRepository } from "@/infrastructure/tauri/tauri-cli.repository"
 import { TauriFileDialogRepository } from "@/infrastructure/tauri/tauri-dialog.repository"
 import { TauriFileRepository } from "@/infrastructure/tauri/tauri-file.repository"
@@ -29,6 +30,10 @@ import { formatErrorMessage } from "@/shared/utils/error"
 export function useApplicationBootstrap() {
   const tabsStore = useTabsStore()
   const filesStore = useFilesStore()
+  const themeStore = useThemeStore()
+  const themeController = useThemeController(themeStore)
+  themeController.start()
+
   const workspace = ref<ActiveEditorCommands | null>(null)
   const editorCommandRevision = ref(0)
   const ready = ref(false)
@@ -53,6 +58,7 @@ export function useApplicationBootstrap() {
     tabsStore,
     filesStore,
     fileRepository,
+    themeStore,
   )
   const closeGuard = useUnsavedChangesGuard(
     fileCommands,
@@ -68,6 +74,7 @@ export function useApplicationBootstrap() {
       closeWindow: closeGuard.requestWindowClose,
     },
     activeEditor: () => workspace.value,
+    openTheme: themeStore.openDialog,
     reportError: filesStore.setError,
     reportUnknown: (id) => console.warn(`Ignoring unknown application command: ${id}`),
   })
@@ -131,11 +138,15 @@ export function useApplicationBootstrap() {
     ready.value = true
   })
 
-  onUnmounted(cli.stop)
+  onUnmounted(() => {
+    cli.stop()
+    themeController.stop()
+  })
 
   return {
     tabsStore,
     filesStore,
+    themeStore,
     workspace,
     ready,
     closeGuard,

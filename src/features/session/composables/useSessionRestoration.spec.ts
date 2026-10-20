@@ -8,6 +8,7 @@ import {
   type SessionSnapshot,
 } from "@/features/session"
 import { useTabsStore } from "@/features/tabs"
+import { useThemeStore } from "@/features/theme"
 
 class FakeSessionRepository implements SessionRepository {
   saved: SessionSnapshot | null = null
@@ -114,5 +115,30 @@ describe("session restoration", () => {
       lastSavedContent: "disk baseline",
     })
     expect(tabsStore.isModified("dirty-id")).toBe(true)
+  })
+
+  it("persists and restores theme preferences in the session snapshot", async () => {
+    const tabsStore = useTabsStore()
+    const filesStore = useFilesStore()
+    const themeStore = useThemeStore()
+    const repository = new FakeSessionRepository()
+    const session = useSessionRestoration(
+      repository,
+      tabsStore,
+      filesStore,
+      undefined,
+      themeStore,
+    )
+
+    themeStore.setPreferences({ mode: "dark", preset: "sepia" })
+    await session.flush()
+
+    expect(repository.saved?.theme).toEqual({ mode: "dark", preset: "sepia" })
+
+    themeStore.setPreferences({ mode: "light", preset: "neutral" })
+    repository.initial = repository.saved
+    await session.restore()
+
+    expect(themeStore.preferences).toEqual({ mode: "dark", preset: "sepia" })
   })
 })

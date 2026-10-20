@@ -21,6 +21,7 @@ export const APPLICATION_COMMAND_IDS = {
   moveTabLeft: "window_move_tab_left",
   moveTabRight: "window_move_tab_right",
   closeWindow: "window_close",
+  openTheme: "settings_theme",
 } as const
 
 export type ApplicationCommandId =
@@ -38,6 +39,7 @@ interface ApplicationCommandDependencies {
   files: FileCommands
   close: CloseCommands
   activeEditor: () => ActiveEditorCommands | null
+  openTheme?: () => void
   reportError: (message: string) => void
   reportUnknown?: (id: string) => void
 }
@@ -54,7 +56,7 @@ const COMMAND_IDS = new Set<string>(Object.values(APPLICATION_COMMAND_IDS))
 export function createApplicationCommands(
   dependencies: ApplicationCommandDependencies,
 ): ApplicationCommands {
-  const { tabsStore, files, close, activeEditor, reportError, reportUnknown } = dependencies
+  const { tabsStore, files, close, activeEditor, openTheme, reportError, reportUnknown } = dependencies
 
   function isKnown(id: string): id is ApplicationCommandId {
     return COMMAND_IDS.has(id)
@@ -122,6 +124,10 @@ export function createApplicationCommands(
         return moveActiveTab(-1)
       case APPLICATION_COMMAND_IDS.moveTabRight:
         return moveActiveTab(1)
+      case APPLICATION_COMMAND_IDS.openTheme:
+        if (!openTheme) return false
+        openTheme()
+        return true
     }
   }
 

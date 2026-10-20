@@ -31,11 +31,13 @@ describe("application commands", () => {
     }
     const reportError = vi.fn()
     const reportUnknown = vi.fn()
+    const openTheme = vi.fn()
     const commands = createApplicationCommands({
       tabsStore,
       files,
       close: { closeTab, closeWindow },
       activeEditor: () => editor,
+      openTheme,
       reportError,
       reportUnknown,
     })
@@ -45,6 +47,7 @@ describe("application commands", () => {
       closeTab,
       closeWindow,
       editor,
+      openTheme,
       reportError,
       reportUnknown,
       commands,
@@ -93,6 +96,13 @@ describe("application commands", () => {
     await commands.execute(APPLICATION_COMMAND_IDS.moveTabLeft)
     expect(tabsStore.tabs.map((tab) => tab.id)).toEqual([second, first])
     expect(tabsStore.activeTabId).toBe(second)
+  })
+
+  it("opens the theme settings dialog through the settings_theme command", async () => {
+    const { openTheme, commands } = setup()
+
+    await expect(commands.execute(APPLICATION_COMMAND_IDS.openTheme)).resolves.toBe(true)
+    expect(openTheme).toHaveBeenCalledOnce()
   })
 
   it("handles unknown menu IDs safely", async () => {

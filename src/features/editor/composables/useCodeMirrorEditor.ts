@@ -7,13 +7,29 @@ import {
   undoDepth,
 } from "@codemirror/commands"
 import { markdown } from "@codemirror/lang-markdown"
+import { HighlightStyle, syntaxHighlighting } from "@codemirror/language"
 import { languages } from "@codemirror/language-data"
 import { EditorState, Transaction } from "@codemirror/state"
 import { EditorView } from "@codemirror/view"
+import { tags } from "@lezer/highlight"
 
 import type { EditorViewportState } from "@/features/editor/model/editor.types"
 
 const VIEWPORT_THROTTLE_MS = 150
+
+const markdownHighlightStyle = HighlightStyle.define([
+  { tag: tags.heading, color: "var(--syntax-heading)", fontWeight: "600" },
+  { tag: tags.emphasis, fontStyle: "italic" },
+  { tag: tags.strong, fontWeight: "700" },
+  { tag: tags.strikethrough, textDecoration: "line-through" },
+  { tag: [tags.keyword, tags.operatorKeyword, tags.modifier], color: "var(--syntax-keyword)" },
+  { tag: [tags.string, tags.special(tags.string)], color: "var(--syntax-string)" },
+  { tag: [tags.comment, tags.lineComment, tags.blockComment], color: "var(--syntax-comment)", fontStyle: "italic" },
+  { tag: [tags.link, tags.url], color: "var(--syntax-link)", textDecoration: "underline" },
+  { tag: [tags.monospace, tags.atom, tags.number, tags.bool], color: "var(--syntax-code)" },
+  { tag: tags.quote, color: "var(--syntax-quote)", fontStyle: "italic" },
+  { tag: [tags.meta, tags.processingInstruction, tags.punctuation], color: "var(--syntax-meta)" },
+])
 
 interface UseCodeMirrorEditorOptions {
   root: Ref<HTMLElement | null>
@@ -136,6 +152,7 @@ export function useCodeMirrorEditor(
         selection: { anchor, head },
         extensions: [
           basicSetup,
+          syntaxHighlighting(markdownHighlightStyle),
           markdown({ codeLanguages: languages }),
           EditorView.lineWrapping,
           updateListener,

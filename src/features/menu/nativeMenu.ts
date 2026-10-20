@@ -269,7 +269,9 @@ export function createNativeMenuController(
     return track(await Submenu.new({
       id: NATIVE_MENU_IDS.settings,
       text: "Settings",
-      items: [await placeholder(NATIVE_MENU_IDS.placeholderSettings)],
+      items: [
+        await commandItem(APPLICATION_COMMAND_IDS.openTheme, "Theme…", "CmdOrCtrl+,"),
+      ],
     }))
   }
 

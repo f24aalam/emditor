@@ -1,5 +1,6 @@
 import type { RecentFile } from "@/features/files"
 import type { DocumentEditorState, WorkspaceMode } from "@/features/tabs"
+import type { ThemePreferences } from "@/features/theme"
 
 export type { SessionRepository } from "@/features/session/model/session.repository"
 
@@ -18,4 +19,5 @@ export interface SessionSnapshot {
   tabs: SessionTabSnapshot[]
   activeTabId: string | null
   recentFiles: RecentFile[]
+  theme?: ThemePreferences
 }
