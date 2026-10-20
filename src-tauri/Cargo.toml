@@ -7,6 +7,7 @@ name = "emditor"
 version = "0.1.0"
 description = "A modern, tabbed desktop Markdown editor"
 authors = ["Emditor Contributors"]
+license = "MIT"
 edition = "2021"
 
 [[bin]]

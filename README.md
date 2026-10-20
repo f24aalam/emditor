@@ -70,3 +70,7 @@ AppImage and sandbox-specific command installation are outside this workflow.
 * [Tauri](https://marketplace.visualstudio.com/items?itemName=tauri-apps.tauri-vscode) extension
 
 * [rust-analyzer](https://marketplace.visualstudio.com/items?itemName=rust-lang.rust-analyzer) extension
+
+## License
+
+This project is licensed under the [MIT License](./LICENSE).

@@ -7,7 +7,7 @@ const projectRoot = resolve(dirname(fileURLToPath(import.meta.url)), "..")
 const tauriRoot = join(projectRoot, "src-tauri")
 const launcherRoot = join(tauriRoot, "launcher")
 const args = ["build", "--release"]
-const target = process.env.CARGO_BUILD_TARGET
+const target = process.env.CARGO_BUILD_TARGET || process.env.TAURI_ENV_TARGET_TRIPLE || undefined
 const platform = process.env.TAURI_ENV_PLATFORM
   ?? (process.platform === "darwin" ? "macos" : process.platform)
 if (target) args.push("--target", target)
