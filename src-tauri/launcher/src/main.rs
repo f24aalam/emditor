@@ -224,8 +224,8 @@ fn process_is_alive(pid: u32) -> bool {
         if handle.is_null() {
             return false;
         }
-        let mut code = 0;
-        let alive = GetExitCodeProcess(handle, &mut code) != 0 && code == STILL_ACTIVE;
+        let mut code: u32 = 0;
+        let alive = GetExitCodeProcess(handle, &mut code) != 0 && code == STILL_ACTIVE as u32;
         CloseHandle(handle);
         alive
     }
